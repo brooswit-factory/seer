@@ -1,0 +1,25 @@
+{
+  "sources": [
+    {
+      "id": "brooswit@servyboi",
+      "machine": "servyboi",
+      "user": "brooswit",
+      "displayName": "Brooswit @ servyboi",
+      "queries": [
+        { "provider": "jira-work", "query": "assignee = \"712020:e160cf60-6480-44de-8554-af5b81c584e2\" AND status IN (\"In Progress\", \"In Review\")" },
+        { "provider": "github", "query": "is:open is:pr author:brooswit" }
+      ]
+    },
+    {
+      "id": "wroos-bit@servyboi",
+      "machine": "servyboi",
+      "user": "wroos-bit",
+      "displayName": "Wroos Bit @ servyboi",
+      "queries": [
+        { "provider": "jira-work", "query": "assignee = \"712020:619ec5ec-2e92-492f-8979-91ccda318230\" AND issuetype = Epic AND status = \"In Progress\"" }
+      ]
+    }
+  ],
+  "linkDepth": 1,
+  "port": 4173
+}

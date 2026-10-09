@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "snapshotTimestamp": "2026-10-08T17:10:00Z",
+  "nodes": [
+    { "id": "jira-work:FACTORY-841", "provider": "jira-work", "label": "seer: D3 graph of queried resources", "url": "https://wroosbit.atlassian.net/browse/FACTORY-841", "ownerSourceId": "brooswit@servyboi", "agentStatus": "working", "providerCanReportStatus": true, "admissionWithheld": false },
+    { "id": "jira-work:FACTORY-853", "provider": "jira-work", "label": "seer S1: repo, CI, config + graph shape, fixture", "url": "https://wroosbit.atlassian.net/browse/FACTORY-853", "ownerSourceId": "brooswit@servyboi", "agentStatus": "working", "providerCanReportStatus": true, "admissionWithheld": false },
+    { "id": "jira-work:FACTORY-859", "provider": "jira-work", "label": "seer S1: create repo, CI, config + graph schemas", "url": "https://wroosbit.atlassian.net/browse/FACTORY-859", "ownerSourceId": "brooswit@servyboi", "agentStatus": "working", "providerCanReportStatus": true, "admissionWithheld": false },
+    { "id": "jira-work:FACTORY-855", "provider": "jira-work", "label": "seer S2: collector", "url": "https://wroosbit.atlassian.net/browse/FACTORY-855", "ownerSourceId": "brooswit@servyboi", "agentStatus": "idle", "providerCanReportStatus": true, "admissionWithheld": false },
+    { "id": "jira-work:FACTORY-857", "provider": "jira-work", "label": "seer S3: status/colour mapping", "url": "https://wroosbit.atlassian.net/browse/FACTORY-857", "ownerSourceId": "brooswit@servyboi", "agentStatus": "none", "providerCanReportStatus": true, "admissionWithheld": false },
+    { "id": "jira-work:FACTORY-858", "provider": "jira-work", "label": "seer S4: D3 force graph", "url": "https://wroosbit.atlassian.net/browse/FACTORY-858", "ownerSourceId": "brooswit@servyboi", "agentStatus": "blocked", "providerCanReportStatus": true, "admissionWithheld": false },
+    { "id": "jira-work:FACTORY-860", "provider": "jira-work", "label": "seer S5: server, refresh loop, CLI", "url": "https://wroosbit.atlassian.net/browse/FACTORY-860", "ownerSourceId": "brooswit@servyboi", "agentStatus": "stalled", "providerCanReportStatus": true, "admissionWithheld": false },
+    { "id": "github:brooswit-factory/seer/pull/1", "provider": "github", "label": "seer#1: S1 skeleton + schemas", "url": "https://github.com/brooswit-factory/seer/pull/1", "ownerSourceId": "brooswit@servyboi", "agentStatus": "idle", "providerCanReportStatus": true, "admissionWithheld": false },
+    { "id": "confluence:ASSIST-home", "provider": "confluence", "label": "ASSIST space home", "url": "https://wroosbit.atlassian.net/wiki/spaces/ASSIST", "ownerSourceId": "brooswit@servyboi", "agentStatus": "none", "providerCanReportStatus": false, "admissionWithheld": false },
+    { "id": "jira-work:FACTORY-843", "provider": "jira-work", "label": "seer: stray colour-token bug", "url": "https://wroosbit.atlassian.net/browse/FACTORY-843", "ownerSourceId": "brooswit@servyboi", "agentStatus": "stalled", "providerCanReportStatus": true, "admissionWithheld": true },
+
+    { "id": "jira-work:FACTORY-825", "provider": "jira-work", "label": "herdr: palette follow-up epic", "url": "https://wroosbit.atlassian.net/browse/FACTORY-825", "ownerSourceId": "wroos-bit@servyboi", "agentStatus": "working", "providerCanReportStatus": true, "admissionWithheld": false },
+    { "id": "jira-work:FACTORY-826", "provider": "jira-work", "label": "herdr: palette follow-up story", "url": "https://wroosbit.atlassian.net/browse/FACTORY-826", "ownerSourceId": "wroos-bit@servyboi", "agentStatus": "idle", "providerCanReportStatus": true, "admissionWithheld": false },
+    { "id": "github:brooswit-factory/herdr/pull/44", "provider": "github", "label": "herdr#44: add peach token", "url": "https://github.com/brooswit-factory/herdr/pull/44", "ownerSourceId": "wroos-bit@servyboi", "agentStatus": "blocked", "providerCanReportStatus": true, "admissionWithheld": false }
+  ],
+  "edges": [
+    { "source": "jira-work:FACTORY-853", "target": "jira-work:FACTORY-841", "kind": "implements" },
+    { "source": "jira-work:FACTORY-859", "target": "jira-work:FACTORY-853", "kind": "implements" },
+    { "source": "jira-work:FACTORY-855", "target": "jira-work:FACTORY-841", "kind": "implements" },
+    { "source": "jira-work:FACTORY-857", "target": "jira-work:FACTORY-841", "kind": "implements" },
+    { "source": "jira-work:FACTORY-858", "target": "jira-work:FACTORY-841", "kind": "implements" },
+    { "source": "jira-work:FACTORY-860", "target": "jira-work:FACTORY-841", "kind": "implements" },
+    { "source": "jira-work:FACTORY-843", "target": "jira-work:FACTORY-841", "kind": "relates" },
+    { "source": "github:brooswit-factory/seer/pull/1", "target": "jira-work:FACTORY-859", "kind": "link" },
+    { "source": "confluence:ASSIST-home", "target": "jira-work:FACTORY-841", "kind": "link" },
+    { "source": "jira-work:FACTORY-826", "target": "jira-work:FACTORY-825", "kind": "implements" },
+    { "source": "github:brooswit-factory/herdr/pull/44", "target": "jira-work:FACTORY-826", "kind": "link" },
+    { "source": "jira-work:FACTORY-825", "target": "jira-work:FACTORY-841", "kind": "relates" }
+  ],
+  "queries": [
+    { "sourceId": "brooswit@servyboi", "provider": "jira-work", "query": "assignee = \"712020:e160cf60-6480-44de-8554-af5b81c584e2\" AND status IN (\"In Progress\", \"In Review\")", "matched": 6, "error": null },
+    { "sourceId": "brooswit@servyboi", "provider": "github", "query": "is:open is:pr author:brooswit", "matched": 1, "error": null },
+    { "sourceId": "brooswit@servyboi", "provider": "confluence", "query": "space = ASSIST", "matched": 0, "error": null },
+    { "sourceId": "wroos-bit@servyboi", "provider": "jira-work", "query": "assignee = \"712020:619ec5ec-2e92-492f-8979-91ccda318230\" AND issuetype = Epic AND status = \"In Progress\"", "matched": 1, "error": null },
+    { "sourceId": "wroos-bit@servyboi", "provider": "github", "query": "is:open is:pr author:wroos-bit", "matched": 0, "error": "provider request timed out after 10000ms" }
+  ]
+}
