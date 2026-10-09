@@ -8,6 +8,8 @@ export interface ValidationError {
 export interface ValidationResult {
   valid: boolean;
   errors: ValidationError[];
+  /** The schema-parsed (defaults applied) graph, present only when `valid` is true. */
+  data?: Graph;
 }
 
 /** Validate an unknown value as a {@link Graph}: schema shape, plus edges referencing existing node ids. */
@@ -43,15 +45,18 @@ export function validateGraph(data: unknown): ValidationResult {
     }
   }
 
-  return { valid: errors.length === 0, errors };
+  if (errors.length > 0) {
+    return { valid: false, errors };
+  }
+  return { valid: true, errors: [], data: graph };
 }
 
 /** Parse and validate, throwing a clear, actionable error naming every offending field path. */
 export function parseGraph(data: unknown): Graph {
   const result = validateGraph(data);
-  if (!result.valid) {
+  if (!result.valid || result.data === undefined) {
     const lines = result.errors.map((e) => `  - ${e.path}: ${e.message}`);
     throw new Error(`Invalid seer graph:\n${lines.join("\n")}`);
   }
-  return data as Graph;
+  return result.data;
 }

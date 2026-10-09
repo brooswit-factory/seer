@@ -29,6 +29,16 @@ describe("parseConfig", () => {
     expect(config.linkDepth).toBe(1);
   });
 
+  test("defaults resultCap to 50 when omitted", () => {
+    const config = parseConfig(validConfig);
+    expect(config.resultCap).toBe(50);
+  });
+
+  test("accepts an explicit resultCap", () => {
+    const config = parseConfig({ ...validConfig, resultCap: 10 });
+    expect(config.resultCap).toBe(10);
+  });
+
   test("rejects a config missing sources", () => {
     expect(() => parseConfig({ port: 4000 })).toThrow(ConfigError);
     try {
