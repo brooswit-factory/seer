@@ -60,17 +60,6 @@ function escapeHtml(s) {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 }
 
-function fattenedPoints(nodes, radius, segments = 10) {
-  const pts = [];
-  for (const n of nodes) {
-    for (let i = 0; i < segments; i++) {
-      const theta = (i / segments) * 2 * Math.PI;
-      pts.push([n.x + radius * Math.cos(theta), n.y + radius * Math.sin(theta)]);
-    }
-  }
-  return pts;
-}
-
 function renderGraph(graph) {
   const wrap = document.getElementById("graph-wrap");
   const width = wrap.clientWidth;
@@ -90,9 +79,6 @@ function renderGraph(graph) {
     .filter((e) => nodeById.has(e.source) && nodeById.has(e.target))
     .map((e) => ({ ...e }));
 
-  const sourceIds = [...new Set(nodes.map((n) => n.ownerSourceId))];
-  const hullColor = d3.scaleOrdinal(d3.schemeTableau10).domain(sourceIds);
-
   const simulation = d3
     .forceSimulation(nodes)
     .force(
@@ -106,7 +92,6 @@ function renderGraph(graph) {
     .force("center", d3.forceCenter(width / 2, height / 2))
     .force("collide", d3.forceCollide(NODE_RADIUS + 4));
 
-  const hullLayer = root.append("g").attr("class", "hulls");
   const edgeLayer = root.append("g").attr("class", "edges");
   const nodeLayer = root.append("g").attr("class", "nodes");
 
@@ -189,26 +174,6 @@ function renderGraph(graph) {
   });
   nodeSel.on("click", (event, d) => showTooltip(event, d));
 
-  const hullGroups = sourceIds.map((id) => ({
-    id,
-    path: hullLayer.append("path").attr("class", "hull").attr("fill", hullColor(id)).attr("stroke", hullColor(id)),
-    label: hullLayer.append("text").attr("class", "hull-label").text(id),
-  }));
-
-  function updateHulls() {
-    for (const group of hullGroups) {
-      const groupNodes = nodes.filter((n) => n.ownerSourceId === group.id);
-      const pts = fattenedPoints(groupNodes, NODE_RADIUS + 18);
-      const hull = d3.polygonHull(pts);
-      if (hull) {
-        group.path.attr("d", `M${hull.map((p) => p.join(",")).join("L")}Z`);
-        const [lx, ly] = d3.polygonCentroid(hull);
-        const top = d3.min(hull, (p) => p[1]);
-        group.label.attr("x", lx).attr("y", top - 6);
-      }
-    }
-  }
-
   simulation.on("tick", () => {
     edgeSel
       .attr("x1", (d) => d.source.x)
@@ -216,7 +181,6 @@ function renderGraph(graph) {
       .attr("x2", (d) => d.target.x)
       .attr("y2", (d) => d.target.y);
     nodeSel.attr("transform", (d) => `translate(${d.x},${d.y})`);
-    updateHulls();
   });
 }
 

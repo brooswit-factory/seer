@@ -3,8 +3,7 @@
 seer ("see-er, one who sees") is the butchr resource graph: given a config of
 (machine, butchr user) pairs and the queries each one runs, it will render a
 D3 graph of every matched resource plus everything it links to, coloured by
-the resource's agent status and grouped into hulls by the (machine, user)
-pair it sits under.
+the resource's agent status.
 
 seer ships the MVP vertical slice (FACTORY-855/FACTORY-869): the config and
 graph-JSON schemas (FACTORY-853), a Jira collector, and a plain static D3
@@ -14,8 +13,8 @@ viewer served by one command on localhost.
 
 - **Now:** the config + graph-JSON schemas and their loader/validator, a Jira
   collector (query execution, one-hop link expansion, dedupe, atomic
-  snapshot write), a plain static D3 viewer (hulls per source, herdr colours,
-  legend, tooltip, failed/truncated query indication), and `bun run seer`
+  snapshot write), a plain static D3 viewer (herdr status colours, legend,
+  tooltip, failed/truncated query indication), and `bun run seer`
   (serve) / `bun run seer collect` (snapshot).
 - **Deliberately deferred past the MVP (FACTORY-841's LATER list):** reaching
   each machine's own butchr daemon (seer never contacts a butchr daemon — see
@@ -42,7 +41,7 @@ bun run seer
 ## The viewer
 
 `public/` is a plain static page (D3 loaded from a CDN `<script>` tag, no
-bundler): `index.html`, `app.js` (the force-directed graph, hulls, tooltip,
+bundler): `index.html`, `app.js` (the force-directed graph, tooltip,
 legend, query panel), `colors.js` (the ONE herdr-verified status→colour
 table, also imported directly by `test/colors.test.ts`), and
 `query-status.js` (classifies a query record as ok / zero-match / failed /
@@ -107,7 +106,8 @@ code imports types rather than redeclaring them.
 - **Graph JSON schema** (`src/graph/schema.ts`, validator in
   `src/graph/validate.ts`): the artifact the collector writes and the viewer
   reads. Per node: a canonical provider-qualified id, provider, label, URL,
-  owning source id (`ownerSourceId`, for hull grouping), one of butchr's five
+  owning source id (`ownerSourceId`, kept in the data though the viewer no
+  longer draws anything from it), one of butchr's five
   `agent:*` statuses (`working | idle | blocked | stalled | none`), whether
   the provider is even capable of reporting status
   (`providerCanReportStatus` — distinguishes "cannot report" from "reports
