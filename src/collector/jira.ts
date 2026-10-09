@@ -29,9 +29,18 @@ interface JiraIssue {
   key: string;
   fields: JiraIssueFields;
 }
+/**
+ * Jira Cloud's CURRENT search endpoint, `GET /rest/api/3/search/jql` — the older `POST
+ * /rest/api/3/search` this provider originally called no longer exists on Jira Cloud (verified
+ * against butchr's own working client, src/atlassian/client.ts, in a butchr checkout). This
+ * shape carries no `total` count, only `issues` plus pagination fields — truncation here is
+ * therefore determined by requesting one more than the cap and checking whether that many came
+ * back (see `search` below), not by comparing against a total.
+ */
 interface JiraSearchResponse {
   issues: JiraIssue[];
-  total: number;
+  isLast?: boolean;
+  nextPageToken?: string;
 }
 
 function edgeKindForLinkType(name: string): EdgeKind {
@@ -111,19 +120,15 @@ export class JiraProvider implements Provider {
   }
 
   private async search(jql: string, maxResults: number): Promise<JiraSearchResponse> {
-    const url = `${this.baseUrl}/rest/api/3/search`;
+    const params = new URLSearchParams({
+      jql,
+      maxResults: String(maxResults),
+      fields: "summary,labels,issuelinks,parent",
+    });
+    const url = `${this.baseUrl}/rest/api/3/search/jql?${params}`;
     const response = await this.fetchImpl(url, {
-      method: "POST",
-      headers: {
-        authorization: this.authHeader,
-        "content-type": "application/json",
-        accept: "application/json",
-      },
-      body: JSON.stringify({
-        jql,
-        maxResults,
-        fields: ["summary", "labels", "issuelinks", "parent"],
-      }),
+      method: "GET",
+      headers: { authorization: this.authHeader, accept: "application/json" },
     });
     if (!response.ok) {
       const body = await response.text().catch(() => "");
@@ -132,17 +137,29 @@ export class JiraProvider implements Provider {
     return (await response.json()) as JiraSearchResponse;
   }
 
-  async runQuery(query: string, cap: number): Promise<{ matches: ProviderMatch[]; total: number }> {
-    const result = await this.search(query, cap);
-    return { matches: result.issues.map((issue) => this.toMatch(issue)), total: result.total };
+  /** Requests `cap + 1` so a result of more than `cap` is distinguishable from exactly `cap` — the endpoint reports no total count to compare against. */
+  async runQuery(query: string, cap: number): Promise<{ matches: ProviderMatch[]; truncated: boolean }> {
+    const result = await this.search(query, cap + 1);
+    const truncated = result.issues.length > cap;
+    const issues = truncated ? result.issues.slice(0, cap) : result.issues;
+    return { matches: issues.map((issue) => this.toMatch(issue)), truncated };
   }
 
   async fetchById(id: string): Promise<ProviderMatch | null> {
     const prefix = `${this.name}:`;
     if (!id.startsWith(prefix)) return null;
     const key = id.slice(prefix.length);
-    const result = await this.search(`key = "${key}"`, 1);
-    const issue = result.issues[0];
-    return issue ? this.toMatch(issue) : null;
+    const url = `${this.baseUrl}/rest/api/3/issue/${encodeURIComponent(key)}?fields=summary,labels,issuelinks,parent`;
+    const response = await this.fetchImpl(url, {
+      method: "GET",
+      headers: { authorization: this.authHeader, accept: "application/json" },
+    });
+    if (response.status === 404) return null;
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      throw new Error(`Jira issue fetch failed (${response.status} ${response.statusText}): ${body.slice(0, 500)}`);
+    }
+    const issue = (await response.json()) as JiraIssue;
+    return this.toMatch(issue);
   }
 }

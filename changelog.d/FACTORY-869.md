@@ -10,6 +10,7 @@ bump: minor
 
 ### Fixed
 - `parseGraph` now returns the schema-validated object (defaults applied) instead of casting the raw input.
+- The Jira provider now calls `GET /rest/api/3/search/jql` (Jira Cloud's current endpoint) instead of the removed `POST /rest/api/3/search`, and derives `truncated` by requesting `cap + 1` results rather than reading a `total` field the new endpoint doesn't return.
 
 ### Changed
 - `fixtures/graph.example.json` gained a `discovery` value on every node (derived from which query actually matched it) and `truncated: false` on every query record, to stay valid under the schema additions above.

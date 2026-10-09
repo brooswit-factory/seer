@@ -1,8 +1,9 @@
 import { existsSync, readFileSync } from "node:fs";
-import { join, normalize } from "node:path";
+import { join, normalize, sep } from "node:path";
 import { openBrowser } from "./open-browser.ts";
 
 const PUBLIC_DIR = new URL("../../public", import.meta.url).pathname;
+const PUBLIC_DIR_PREFIX = PUBLIC_DIR.endsWith(sep) ? PUBLIC_DIR : PUBLIC_DIR + sep;
 
 const CONTENT_TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -48,7 +49,7 @@ export function startServer(options: ServeOptions): ReturnType<typeof Bun.serve>
       // Resolve, then verify the result stays inside PUBLIC_DIR — collapses any `..` traversal
       // attempt down to a 404 rather than a path outside the served directory.
       const resolved = normalize(join(PUBLIC_DIR, requested));
-      if (!resolved.startsWith(PUBLIC_DIR) || !existsSync(resolved)) {
+      if (!(resolved === PUBLIC_DIR || resolved.startsWith(PUBLIC_DIR_PREFIX)) || !existsSync(resolved)) {
         return new Response("Not found", { status: 404 });
       }
       return new Response(Bun.file(resolved), { headers: { "content-type": contentTypeFor(resolved) } });

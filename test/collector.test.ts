@@ -22,15 +22,15 @@ function match(name: string, overrides: Partial<ProviderMatch> = {}): ProviderMa
 class StubProvider implements Provider {
   readonly name = "stub";
   constructor(
-    private readonly byQuery: Record<string, { matches: ProviderMatch[]; total?: number } | Error>,
+    private readonly byQuery: Record<string, { matches: ProviderMatch[]; truncated?: boolean } | Error>,
     private readonly byId: Record<string, ProviderMatch | null> = {},
   ) {}
 
-  async runQuery(query: string, _cap: number): Promise<{ matches: ProviderMatch[]; total: number }> {
+  async runQuery(query: string, _cap: number): Promise<{ matches: ProviderMatch[]; truncated: boolean }> {
     const result = this.byQuery[query];
     if (result === undefined) throw new Error(`StubProvider: unscripted query "${query}"`);
     if (result instanceof Error) throw result;
-    return { matches: result.matches, total: result.total ?? result.matches.length };
+    return { matches: result.matches, truncated: result.truncated ?? false };
   }
 
   async fetchById(id: string): Promise<ProviderMatch | null> {
@@ -164,7 +164,9 @@ describe("collect", () => {
       { id: "a@m1", machine: "m1", user: "a", displayName: "A", queries: [{ provider: "stub", query: "big" }] },
     ]);
     const provider = new StubProvider({
-      big: { matches: [match("n1"), match("n2")], total: 500 },
+      // The provider itself decides truncation (e.g. by requesting cap+1) — the collector just
+      // relays the flag, since Jira's current search endpoint reports no total count to compare.
+      big: { matches: [match("n1"), match("n2")], truncated: true },
     });
 
     const graph = await collect(config, { stub: provider }, { resultCap: 2 });

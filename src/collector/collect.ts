@@ -61,7 +61,7 @@ export async function collect(config: SeerConfig, providers: Record<string, Prov
         continue;
       }
       try {
-        const { matches, total } = await provider.runQuery(q.query, options.resultCap);
+        const { matches, truncated } = await provider.runQuery(q.query, options.resultCap);
         for (const match of matches) {
           upsertNode(byId, match, source.id, "query");
           for (const link of match.links) {
@@ -74,7 +74,7 @@ export async function collect(config: SeerConfig, providers: Record<string, Prov
           query: q.query,
           matched: matches.length,
           error: null,
-          truncated: total > options.resultCap,
+          truncated,
         });
       } catch (cause) {
         queries.push({
