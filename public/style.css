@@ -154,18 +154,6 @@ header .timestamp {
   color: var(--muted);
 }
 
-.hull {
-  fill-opacity: 0.12;
-  stroke-width: 1.5;
-  stroke-opacity: 0.6;
-}
-
-.hull-label {
-  font-size: 11px;
-  fill: var(--muted);
-  pointer-events: none;
-}
-
 .edge {
   stroke: var(--border);
   stroke-opacity: 0.8;
