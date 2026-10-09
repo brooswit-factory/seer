@@ -1,15 +1,18 @@
 import { describe, expect, test } from "bun:test";
 import {
+  BORDER_GAP_WIDTH,
   BORDER_WIDTH,
   JIRA_RESOURCE_TYPE_SHAPES,
   SHAPE_ROUNDED_SQUARE,
   SHAPE_STAR,
   borderForNode,
+  fillInsetForNode,
   shapeForNode,
+  shouldShowDiscoveryDot,
   sizeForNode,
 } from "../public/shapes.js";
 import { SHAPE_PROJECT, PROJECT_SIZE } from "../public/project.js";
-import { jiraBorderForNode } from "../public/jira-status.js";
+import { JIRA_BORDER_DARK_HAIRLINE, jiraBorderForNode } from "../public/jira-status.js";
 
 describe("shapeForNode", () => {
   test.each(Object.entries(JIRA_RESOURCE_TYPE_SHAPES))("Jira resourceType %s maps to shape %s", (resourceType, expectedShape) => {
@@ -149,5 +152,64 @@ describe("borderForNode: table-driven over every Jira status incl. custom/non-Ji
   test("a project node (FACTORY-911) draws NO border, even though it would otherwise fall back to the neutral Jira colour", () => {
     const projectNode = { provider: "jira-project", resourceType: "project", providerCanReportStatus: false };
     expect(borderForNode(projectNode, "light").visible).toBe(false);
+  });
+
+  test("gapColor is set ONLY for dark-theme To Do (FACTORY-944 item 1) — null everywhere else, including light-theme To Do", () => {
+    const todoNode = { jiraStatus: { name: "To Do", category: "new" }, providerCanReportStatus: true };
+    const doneNode = { jiraStatus: { name: "Done", category: "done" }, providerCanReportStatus: true };
+    expect(borderForNode(todoNode, "dark").gapColor).toBe(JIRA_BORDER_DARK_HAIRLINE);
+    expect(borderForNode(todoNode, "light").gapColor).toBeNull();
+    expect(borderForNode(doneNode, "dark").gapColor).toBeNull();
+    expect(borderForNode(doneNode, "light").gapColor).toBeNull();
+  });
+});
+
+describe("fillInsetForNode / BORDER_GAP_WIDTH (FACTORY-944 item 3): the canvas-coloured gap between a node's fill and its Jira-status border", () => {
+  test("BORDER_GAP_WIDTH is within the ticket's 1-2px band", () => {
+    expect(BORDER_GAP_WIDTH).toBeGreaterThanOrEqual(1);
+    expect(BORDER_GAP_WIDTH).toBeLessThanOrEqual(2);
+  });
+
+  test("a bordered (non-project) node's fill is inset by the gap plus half the border width — enough that the border's own inward half never overlaps the fill", () => {
+    const node = { jiraStatus: { name: "In Progress", category: "indeterminate" }, providerCanReportStatus: true };
+    const inset = fillInsetForNode(node);
+    expect(inset).toBe(BORDER_GAP_WIDTH + BORDER_WIDTH / 2);
+    // The visible canvas-coloured ring width is inset minus the border's own inward reach —
+    // it must come out to exactly BORDER_GAP_WIDTH, not merely "some positive amount".
+    expect(inset - BORDER_WIDTH / 2).toBe(BORDER_GAP_WIDTH);
+  });
+
+  test("a project node (FACTORY-911) draws no border, so its fill is never inset", () => {
+    const projectNode = { provider: "jira-project", resourceType: "project" };
+    expect(fillInsetForNode(projectNode)).toBe(0);
+  });
+
+  test("every Jira status (incl. custom/non-Jira fallback) gets the same inset — the gap isn't status-dependent", () => {
+    const statuses = [
+      { jiraStatus: { name: "To Do", category: "new" } },
+      { jiraStatus: { name: "In Review", category: "indeterminate" } },
+      { provider: "github" }, // non-Jira -> neutral border, still visible -> still inset
+    ];
+    const insets = statuses.map((node) => fillInsetForNode(node));
+    expect(new Set(insets).size).toBe(1);
+  });
+});
+
+describe("shouldShowDiscoveryDot (FACTORY-945: flipped from marking link-discovered nodes to marking direct query hits)", () => {
+  test.each([
+    ["query", false, true],
+    ["link", false, false],
+    ["query", true, false], // a project node never gets a dot, even if somehow marked query-hit
+    ["link", true, false],
+  ])('discovery "%s", isProject=%s -> dot %s', (discovery, isProject, expected) => {
+    const node = isProject
+      ? { provider: "jira-project", resourceType: "project", discovery }
+      : { provider: "jira-work", resourceType: "Task", discovery };
+    expect(shouldShowDiscoveryDot(node)).toBe(expected);
+  });
+
+  test("a node with no discovery field at all gets no dot", () => {
+    expect(shouldShowDiscoveryDot({ provider: "jira-work" })).toBe(false);
+    expect(shouldShowDiscoveryDot({})).toBe(false);
   });
 });

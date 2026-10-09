@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { CANNOT_REPORT_COLOR, STATUS_COLORS, colorForNode, outlineForNode, statusLabel } from "../public/colors.js";
+import { COLORBLIND_TYPES, rgbDistance, simulateColorblind } from "../public/colorblind.js";
 
 // FACTORY-944/FACTORY-943: Brooswit's requested agent-status fill palette, REPLACING the
 // FACTORY-841 herdr-verified table this file used to pin — working/idle are swapped (working is
@@ -9,7 +10,7 @@ const EXPECTED = {
   light: {
     working: "#40a02b",
     blocked: "#d20f39",
-    idle: "#df8e1d",
+    idle: "#ffe63c",
     stalled: "#fe640b",
     none: "#9ca0b0",
   },
@@ -75,3 +76,25 @@ describe("colorForNode / outlineForNode", () => {
     expect(statusLabel(reportsNone)).toBe("none");
   });
 });
+
+// PR #29 review item 2: an earlier light-theme Idle hex read as "orange-ish", close enough to
+// Stalled's orange to raise a colour-blind-safety question explicitly, not just by incidental
+// coverage of some larger pairwise matrix (which would also flag Working/Blocked and
+// Blocked/Stalled — a pre-existing red/green/orange tension in colours this ticket didn't touch
+// at all, out of scope here).
+describe("Idle vs Stalled stay colour-blind-distinguishable (FACTORY-944, PR #29 review item 2)", () => {
+  test.each(["light", "dark"] as const)("%s theme", (theme) => {
+    const idle = hexToRgb(STATUS_COLORS[theme].idle);
+    const stalled = hexToRgb(STATUS_COLORS[theme].stalled);
+    expect(rgbDistance(idle, stalled)).toBeGreaterThan(0);
+    for (const type of COLORBLIND_TYPES) {
+      const distance = rgbDistance(simulateColorblind(STATUS_COLORS[theme].idle, type), simulateColorblind(STATUS_COLORS[theme].stalled, type));
+      expect(distance).toBeGreaterThanOrEqual(30);
+    }
+  });
+});
+
+function hexToRgb(hex: string): [number, number, number] {
+  const normalized = hex.replace(/^#/, "");
+  return [parseInt(normalized.slice(0, 2), 16), parseInt(normalized.slice(2, 4), 16), parseInt(normalized.slice(4, 6), 16)];
+}

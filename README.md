@@ -192,9 +192,11 @@ once already; any positive decimal is valid (zero, negative, NaN, and
 non-numeric are rejected). The server always echoes its real configured
 values on `/graph.json` (`sizeEpic`/`sizeBug`/`sizeStory`/`sizeBase`), and
 the viewer's size legend reads them from there rather than hardcoding a
-number. The link-discovered hollow dot (`circle.discovery-dot`) is a fixed
-`DISCOVERY_DOT_RADIUS` regardless of any multiplier — it marks discovery,
-not size.
+number. The query-hit dot (`circle.discovery-dot`, FACTORY-945: flipped from
+marking link-discovered nodes to marking direct query hits — "dots on those
+that the query hits, no dots on the others") is a fixed `DISCOVERY_DOT_RADIUS`
+regardless of any multiplier — it marks discovery, not size — and never
+appears on a link-discovered node or a synthesised project node.
 
 Shape strokes use the `--shape-stroke` CSS custom property
 (`public/style.css`), chosen to meet WCAG contrast ≥ 4.5:1 against `--bg` in

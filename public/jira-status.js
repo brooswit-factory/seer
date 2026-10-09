@@ -43,7 +43,11 @@ export const JIRA_STATUS_BORDERS = Object.freeze({
     [JIRA_BORDER_TODO]: "#11111b", // near-black (Catppuccin "crust") — reads as black on the light canvas
     [JIRA_BORDER_BACKLOG]: "#6e6e6e", // grey — distinct shade from `neutral` below
     [JIRA_BORDER_IN_PROGRESS]: "#0b6e2e", // green
-    [JIRA_BORDER_IN_REVIEW]: "#6b5205", // yellow/gold, darkened for light-canvas contrast
+    [JIRA_BORDER_IN_REVIEW]: "#5a5a00", // yellow (R=G, B=0: true yellow hue, not brown/amber) —
+    // darkened only as far as the 4.5:1 floor against the light canvas requires (PR #29 review
+    // item 2 flagged an earlier, redder attempt as reading brown); a saturated bright yellow
+    // cannot itself clear that floor against this light a canvas, the same structural
+    // reason dark-theme "To Do" can't be literal black — see the module comment above.
     [JIRA_BORDER_DONE]: "#1a56c4", // blue
     [JIRA_BORDER_NEUTRAL]: "#4a4a4a", // grey — non-Jira / unrecognized custom status
   }),

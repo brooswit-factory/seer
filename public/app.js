@@ -1,7 +1,7 @@
 import { colorForNode, statusLabel, STATUS_COLORS, CANNOT_REPORT_COLOR } from "./colors.js";
 import { jiraStatusLabel, JIRA_STATUS_BORDERS } from "./jira-status.js";
 import { classifyQueryRecord, queryStatusLabel } from "./query-status.js";
-import { shapeForNode, borderForNode, HAIRLINE_EXTRA_WIDTH, SHAPE_HEXAGON, SHAPE_ROUNDED_SQUARE } from "./shapes.js";
+import { shapeForNode, borderForNode, fillInsetForNode, shouldShowDiscoveryDot, BORDER_GAP_WIDTH, SHAPE_HEXAGON, SHAPE_ROUNDED_SQUARE } from "./shapes.js";
 import { scaledSizeForNode } from "./node-scale.js";
 import { computeFitTransform, shouldFit } from "./fit-view.js";
 import { isProjectNode, projectFill, SHAPE_PROJECT, PROJECT_LINK_DISTANCE } from "./project.js";
@@ -11,9 +11,13 @@ const DEFAULT_REFRESH_SECONDS = 30;
 /** Collision-radius padding, px — same margin the pre-FACTORY-890 fixed collide radius (NODE_RADIUS + 4) used. */
 const COLLIDE_PADDING = 4;
 /**
- * The link-discovered hollow dot's fixed radius (FACTORY-900 item 7, Brooswit: "the hollow dot
- * in a node should be 1x") — deliberately NOT derived from `scaledSizeForNode`/SEER_SIZE_*: it
- * marks discovery, not size, and must read identically on a base-size and a live-agent node.
+ * The query-hit dot's fixed radius (FACTORY-900 item 7, Brooswit: "the hollow dot in a node
+ * should be 1x") — deliberately NOT derived from `scaledSizeForNode`/SEER_SIZE_*: it marks
+ * discovery, not size, and must read identically on a base-size and a live-agent node.
+ * FACTORY-945 (Brooswit, via FACTORY-943's addendum) FLIPPED which discovery value draws it: a
+ * dot now marks a direct query hit (`discovery === "query"`), not a link-discovered node — "Dots
+ * on those that the query hits, no dots on the others." A project node (FACTORY-911) never gets
+ * one either way, query-hit or not — it's a synthesised container, not a matched resource.
  */
 const DISCOVERY_DOT_RADIUS = 2.5;
 /**
@@ -247,7 +251,7 @@ function renderBorderLegend() {
     `<div class="legend-row"><span class="swatch" style="background:none;border:2px dashed #fab387"></span><span>admission withheld (a second, wider ring overlay, never a fill)</span></div>`,
   );
   rows.push(
-    `<div class="legend-row"><span style="width:14px;text-align:center">○</span><span>hollow dot in a node = link-discovered (no query matched it directly); fixed size, never scales with the node</span></div>`,
+    `<div class="legend-row"><span style="width:14px;text-align:center">○</span><span>dot = hit by a query (never a link-discovered or project node); fixed size, never scales with the node</span></div>`,
   );
   el.innerHTML = rows.join("");
 }
@@ -325,6 +329,27 @@ function renderGraph(initialGraph) {
 
   function approxRadiusForNode(node) {
     return Math.sqrt(scaledSizeForNode(node, sizeConfig) / Math.PI);
+  }
+
+  /**
+   * The FILL shape's own path — smaller than `symbolPathForNode`'s by `fillInsetForNode` (zero
+   * for a project node, which draws no border and needs no gap) so the canvas-coloured
+   * `BORDER_GAP_WIDTH`px annulus FACTORY-944 item 3 requires shows through between the fill and
+   * the border stroke (drawn separately, at the node's full/un-inset size — see
+   * `renderNodeSelection`), rather than the border straddling the fill's own edge with no gap at
+   * all. The inset is converted from a target pixel radius to a D3 symbol `size` (area) via the
+   * same circle-area approximation `approxRadiusForNode` already uses, floored at 1px of radius
+   * so a very small node's fill never vanishes entirely.
+   */
+  function fillPathForNode(node) {
+    const shape = shapeForNode(node);
+    const size = scaledSizeForNode(node, sizeConfig);
+    const inset = fillInsetForNode(node);
+    if (inset <= 0) return d3.symbol().type(D3_SYMBOL_BY_SHAPE[shape]).size(size)();
+    const radius = Math.sqrt(size / Math.PI);
+    const insetRadius = Math.max(1, radius - inset);
+    const insetSize = Math.PI * insetRadius * insetRadius;
+    return d3.symbol().type(D3_SYMBOL_BY_SHAPE[shape]).size(insetSize)();
   }
 
   /** Re-fits the view to the current node positions, unless the user has since panned/zoomed by hand. */
@@ -444,11 +469,22 @@ function renderGraph(initialGraph) {
     const entered = sel.enter().append("g").attr("class", "node").call(dragBehavior());
     // Shape carries resource type (FACTORY-876 item 3); fill is agent status, border is Jira
     // status (FACTORY-939, reverting FACTORY-900's inversion) — type is never encoded in hue
-    // either way. Stroke attrs are set per-node below (borderForNode), not here.
-    // `node-border-halo` (FACTORY-944 item 1) sits behind `node-shape` and is only ever painted
-    // when borderForNode's `hairline` is non-null (dark-theme "To Do"): a wider, unfilled stroke
-    // of the same path, so a thin ring of it shows past the narrower border stroke on top.
-    entered.append("path").attr("class", "node-border-halo").attr("fill", "none");
+    // either way. Three stacked layers draw a node, back to front:
+    // - `node-border-gap`: normally painted NOTHING (`stroke: none`) — the canvas-coloured gap
+    //   FACTORY-944 item 3 requires between fill and border is left to the canvas itself, simply
+    //   by drawing `node-shape`'s fill smaller than the border (see `fillPathForNode`/
+    //   `fillInsetForNode`), never by actively painting a gap colour. The one exception is
+    //   dark-theme "To Do" (`borderForNode`'s `gapColor`, FACTORY-944 item 1): there, a plain
+    //   canvas-coloured gap would be exactly as invisible against the dark canvas as the
+    //   near-black border itself, so this layer paints a light hairline instead, wide enough
+    //   that it still shows past the narrower `node-border-ring` stroke drawn on top of it.
+    // - `node-border-ring`: the actual Jira-status border colour, at the node's full (un-inset)
+    //   size.
+    // - `node-shape`: the fill (agent-status colour), at a SMALLER size when bordered
+    //   (`fillPathForNode`), so the gap above has somewhere to show.
+    // Stroke/fill attrs are set per-node below (borderForNode/fillInsetForNode), not here.
+    entered.append("path").attr("class", "node-border-gap").attr("fill", "none");
+    entered.append("path").attr("class", "node-border-ring").attr("fill", "none");
     entered.append("path").attr("class", "node-shape");
     entered.append("text").attr("class", "node-label").attr("text-anchor", "middle");
     entered.on("mouseenter", showTooltip).on("mousemove", showTooltip).on("mouseleave", hideTooltip).on("click", showTooltip);
@@ -458,31 +494,36 @@ function renderGraph(initialGraph) {
     // Re-run on every refresh, not just on enter: a node whose resourceType/jiraStatus/agentStatus
     // (or anything else shape/fill/border-relevant) changed needs its path/size/fill/border/label
     // offset to follow, in place.
-    merged.select("path.node-border-halo").attr("d", (d) => symbolPathForNode(d));
+    merged.select("path.node-border-gap").attr("d", (d) => symbolPathForNode(d));
+    merged.select("path.node-border-ring").attr("d", (d) => symbolPathForNode(d));
     merged
       .select("path.node-shape")
-      .attr("d", (d) => symbolPathForNode(d))
+      .attr("d", (d) => (isProjectNode(d) ? symbolPathForNode(d) : fillPathForNode(d)))
       .attr("fill", (d) => (isProjectNode(d) ? projectFill(currentTheme()) : colorForNode(d, currentTheme())))
       .each(function (d) {
         const theme = currentTheme();
         const border = borderForNode(d, theme);
-        const shapeSel = d3.select(this);
-        const haloSel = d3.select(this.parentNode).select("path.node-border-halo");
+        const g = d3.select(this.parentNode);
+        const gapSel = g.select("path.node-border-gap");
+        const ringSel = g.select("path.node-border-ring");
         if (border.visible) {
-          shapeSel
+          ringSel
             .attr("stroke", border.stroke)
             .attr("stroke-width", border.width)
             .attr("stroke-dasharray", border.dashed ? "3,2" : null);
-          if (border.hairline) {
-            haloSel.attr("stroke", border.hairline).attr("stroke-width", border.width + HAIRLINE_EXTRA_WIDTH).attr("stroke-dasharray", border.dashed ? "3,2" : null);
+          if (border.gapColor) {
+            gapSel
+              .attr("stroke", border.gapColor)
+              .attr("stroke-width", border.width + 2 * BORDER_GAP_WIDTH)
+              .attr("stroke-dasharray", border.dashed ? "3,2" : null);
           } else {
-            haloSel.attr("stroke", "none");
+            gapSel.attr("stroke", "none");
           }
         } else {
           // No Jira-status border to draw (e.g. a project node) — the shape stays plain, same
           // neutral outline every node used pre-FACTORY-900.
-          shapeSel.attr("stroke", "var(--node-stroke)").attr("stroke-width", 1.5).attr("stroke-dasharray", null);
-          haloSel.attr("stroke", "none");
+          ringSel.attr("stroke", "var(--node-stroke)").attr("stroke-width", 1.5).attr("stroke-dasharray", null);
+          gapSel.attr("stroke", "none");
         }
       });
     merged
@@ -508,9 +549,10 @@ function renderGraph(initialGraph) {
       }
 
       const hasDot = !g.select("circle.discovery-dot").empty();
-      if (d.discovery === "link" && !hasDot) {
+      const shouldHaveDot = shouldShowDiscoveryDot(d);
+      if (shouldHaveDot && !hasDot) {
         g.insert("circle", "text").attr("class", "discovery-dot").attr("r", DISCOVERY_DOT_RADIUS).attr("fill", "#1e1e2e");
-      } else if (d.discovery !== "link" && hasDot) {
+      } else if (!shouldHaveDot && hasDot) {
         g.select("circle.discovery-dot").remove();
       }
     });

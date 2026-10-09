@@ -14,7 +14,11 @@ export const STATUS_COLORS = Object.freeze({
   light: Object.freeze({
     working: "#40a02b", // green (Catppuccin Latte) — was yellow pre-FACTORY-944
     blocked: "#d20f39", // red (Catppuccin Latte) — unchanged role
-    idle: "#df8e1d", // yellow (Catppuccin Latte) — was green pre-FACTORY-944
+    idle: "#ffe63c", // yellow — was green pre-FACTORY-944. A bright lemon yellow rather than
+    // Catppuccin Latte's amber "yellow" (#df8e1d, too close to Stalled's orange under simulated
+    // colour-blindness — PR #29 review item 2): fill has no contrast-vs-canvas floor to honour
+    // (unlike the border palette), so nothing stops picking a clearly-yellow, clearly-not-orange
+    // hue here; verified >= 30 apart from `stalled` under every simulated dichromacy type.
     stalled: "#fe640b", // orange (Catppuccin Latte) — unchanged role
     none: "#9ca0b0", // grey (Catppuccin Latte overlay0) — unchanged role
   }),
