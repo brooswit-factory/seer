@@ -8,11 +8,11 @@ import { isProjectNode, projectFill, SHAPE_PROJECT, PROJECT_LINK_DISTANCE } from
 import { nodeInfoHtml, escapeHtml } from "./node-info.js";
 import { createSelectionState, select as selectNode, deselect as deselectNode, reconcileSelection } from "./selection.js";
 import { sortNodesForSidebar, filterNodesForSidebar } from "./sidebar-list.js";
+import { splitNodeLabel, maxCharsForRadius, truncateToChars, line1Dy, labelBottomExtent, LINE2_FONT_SCALE, LINE_SPACING_PX } from "./node-label.js";
 
 /** Extra radius (px), on top of the admission ring's own gap, the selection halo (FACTORY-957 item 4) is drawn at — distinct from `ADMISSION_RING_GAP` below so the two rings never collide even when a node has both. */
 const SELECTION_HALO_GAP = 13;
 
-const LABEL_MAX_CHARS = 22;
 const DEFAULT_REFRESH_SECONDS = 30;
 /** Collision-radius padding, px — same margin the pre-FACTORY-890 fixed collide radius (NODE_RADIUS + 4) used. */
 const COLLIDE_PADDING = 4;
@@ -116,11 +116,6 @@ const D3_SYMBOL_BY_SHAPE = {
   [SHAPE_ROUNDED_SQUARE]: roundedSquareSymbol,
   [SHAPE_PROJECT]: d3.symbolWye,
 };
-
-function truncateLabel(label) {
-  if (label.length <= LABEL_MAX_CHARS) return label;
-  return label.slice(0, LABEL_MAX_CHARS - 1) + "…";
-}
 
 async function fetchGraph() {
   const res = await fetch("/graph.json");
@@ -510,7 +505,10 @@ function renderGraph(initialGraph, { onNodeClick, onBackgroundClick } = {}) {
   /** Re-fits the view to the current node positions, unless the user has since panned/zoomed by hand. */
   function fit({ force = false } = {}) {
     if (!shouldFit({ userTransformed, force })) return;
-    const points = nodes.map((d) => ({ x: d.x, y: d.y, r: approxRadiusForNode(d) }));
+    // `r` here is the two-line label's own bottom extent (FACTORY-970), not just the node's shape
+    // radius: it's always the larger of the two (the label sits below the shape), so the fitted
+    // bbox now includes line 2's extent instead of only the shape's.
+    const points = nodes.map((d) => ({ x: d.x, y: d.y, r: labelBottomExtent(approxRadiusForNode(d)) }));
     const { x, y, k } = computeFitTransform(points, width, height);
     svg
       .transition()
@@ -647,7 +645,15 @@ function renderGraph(initialGraph, { onNodeClick, onBackgroundClick } = {}) {
     entered.append("path").attr("class", "node-border-gap").attr("fill", "none");
     entered.append("path").attr("class", "node-border-ring").attr("fill", "none");
     entered.append("path").attr("class", "node-shape");
-    entered.append("text").attr("class", "node-label").attr("text-anchor", "middle");
+    const enteredLabel = entered.append("text").attr("class", "node-label").attr("text-anchor", "middle");
+    // Two `<tspan>`s (FACTORY-970): line 1 is the node's key, line 2 (directly beneath, muted,
+    // smaller) is the label with that key stripped — see `node-label.js`'s `splitNodeLabel`.
+    // Each carries its own `x="0"` so `text-anchor: middle` re-centres it independently of
+    // whatever width the OTHER line's text happens to have — without it, a tspan with no `x`
+    // just continues from the first tspan's end-of-text cursor instead of starting a new
+    // centred line.
+    enteredLabel.append("tspan").attr("class", "node-label-key").attr("x", 0);
+    enteredLabel.append("tspan").attr("class", "node-label-name").attr("x", 0);
     entered.on("mouseenter", showTooltip).on("mousemove", showTooltip).on("mouseleave", hideTooltip);
     // Click selects the node (FACTORY-957 item 2's "select ... via graph click") IN ADDITION to
     // the existing click-shows-tooltip behaviour above (hover's own mouseenter/mousemove/
@@ -694,10 +700,19 @@ function renderGraph(initialGraph, { onNodeClick, onBackgroundClick } = {}) {
           gapSel.attr("stroke", "none");
         }
       });
-    merged
-      .select("text.node-label")
-      .attr("dy", (d) => approxRadiusForNode(d) + 12)
-      .text((d) => truncateLabel(d.label));
+    merged.each(function (d) {
+      const radius = approxRadiusForNode(d);
+      const { key, name } = splitNodeLabel(d);
+      const label = d3.select(this).select("text.node-label");
+      label
+        .select("tspan.node-label-key")
+        .attr("dy", line1Dy(radius))
+        .text(truncateToChars(key, maxCharsForRadius(radius)));
+      label
+        .select("tspan.node-label-name")
+        .attr("dy", LINE_SPACING_PX)
+        .text(truncateToChars(name, maxCharsForRadius(radius, LINE2_FONT_SCALE)));
+    });
 
     // The admission ring and the discovery dot are presence-toggled per node, not just styled,
     // since whether a node has one can change between refreshes. Radii are re-derived every pass
