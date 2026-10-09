@@ -2,7 +2,7 @@
 // shapes.js) so the (resourceType x sizeConfig) table is testable without a browser.
 //
 // REPLACES FACTORY-890/900's (agentStatus x resourceType) table: live agents are now shown ONLY
-// by the agent-status ring (agent-ring.js) — node size no longer bumps for a live agent at all.
+// by the node's own fill colour (colors.js) — node size no longer bumps for a live agent at all.
 // Instead, each of three Jira issue types that gets its own setting (Epic, Bug, Story) scales by
 // its own configured multiplier; every other node — Task, Sub-task, any other/unknown Jira issue
 // type, and every non-Jira provider node — scales by `sizeConfig.base`.

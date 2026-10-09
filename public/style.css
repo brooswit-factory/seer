@@ -153,21 +153,20 @@ header .timestamp.stale {
   border-width: 2px;
 }
 
-/* Agent-status ring legend (FACTORY-900): a hollow circle (no fill) with a thick coloured
-   border, mirroring how the ring is actually drawn around a node — never a filled swatch, since
-   the ring itself is never a fill. */
-.ring-swatch {
+/* Jira-status border legend (FACTORY-939, repurposed from FACTORY-900's ring legend): a hollow
+   circle (no fill) with a thick coloured border, mirroring how the border is actually drawn on a
+   node's own shape — never a filled swatch, since the border itself is never a fill. */
+.border-swatch {
   width: 14px;
   height: 14px;
   border-radius: 50%;
   flex-shrink: 0;
   background: none;
-  border: 3.5px solid;
+  border: 3.5px solid var(--node-stroke);
 }
 
-.ring-swatch.dashed {
+.border-swatch.dashed {
   border-style: dashed;
-  border-width: 1.5px;
 }
 
 .shape-icon {

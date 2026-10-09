@@ -1,12 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import {
+  BORDER_WIDTH,
   JIRA_RESOURCE_TYPE_SHAPES,
   SHAPE_ROUNDED_SQUARE,
   SHAPE_STAR,
+  borderForNode,
   shapeForNode,
   sizeForNode,
 } from "../public/shapes.js";
 import { SHAPE_PROJECT, PROJECT_SIZE } from "../public/project.js";
+import { jiraBorderForNode } from "../public/jira-status.js";
 
 describe("shapeForNode", () => {
   test.each(Object.entries(JIRA_RESOURCE_TYPE_SHAPES))("Jira resourceType %s maps to shape %s", (resourceType, expectedShape) => {
@@ -91,5 +94,60 @@ describe("sizeForNode", () => {
     for (const node of nodes) {
       expect(sizeForNode(node)).toBeGreaterThan(0);
     }
+  });
+});
+
+const JIRA_STATUSES: Array<[string, string]> = [
+  ["To Do", "new"],
+  ["Backlog", "new"],
+  ["In Progress", "indeterminate"],
+  ["In Review", "indeterminate"],
+  ["Done", "done"],
+  ["Some Custom Status", "indeterminate"], // non-Jira/unrecognized -> falls back by category
+];
+
+describe("borderForNode: table-driven over every Jira status incl. custom/non-Jira (FACTORY-939)", () => {
+  test.each(JIRA_STATUSES)('jiraStatus "%s" (%s), reporting provider', (name, category) => {
+    const node = { jiraStatus: { name, category }, providerCanReportStatus: true };
+    const border = borderForNode(node, "light");
+    expect(border.visible).toBe(true);
+    expect(border.stroke).toBe(jiraBorderForNode(node, "light"));
+    expect(border.width).toBe(BORDER_WIDTH);
+    expect(border.dashed).toBe(false);
+  });
+
+  test("a non-Jira node (no jiraStatus at all) still draws a border, coloured neutral", () => {
+    const node = { provider: "github", providerCanReportStatus: true };
+    const border = borderForNode(node, "light");
+    expect(border.visible).toBe(true);
+    expect(border.stroke).toBe(jiraBorderForNode(node, "light"));
+  });
+
+  test.each(JIRA_STATUSES)('jiraStatus "%s" (%s), provider CANNOT report agent status — dashed border regardless of Jira status', (name, category) => {
+    const node = { jiraStatus: { name, category }, providerCanReportStatus: false };
+    const border = borderForNode(node, "light");
+    expect(border.visible).toBe(true);
+    expect(border.dashed).toBe(true);
+    // The dash is about agent reporting, not Jira status — the colour still follows jiraStatus.
+    expect(border.stroke).toBe(jiraBorderForNode(node, "light"));
+    expect(border.width).toBe(BORDER_WIDTH);
+  });
+
+  test("the border colour always matches jira-status.js — never a re-chosen value", () => {
+    for (const [name, category] of JIRA_STATUSES) {
+      const node = { jiraStatus: { name, category }, providerCanReportStatus: true };
+      expect(borderForNode(node, "dark").stroke).toBe(jiraBorderForNode(node, "dark"));
+    }
+  });
+
+  test("border width stays within the ticket's 3-4px band", () => {
+    const border = borderForNode({ providerCanReportStatus: true }, "light");
+    expect(border.width).toBeGreaterThanOrEqual(3);
+    expect(border.width).toBeLessThanOrEqual(4);
+  });
+
+  test("a project node (FACTORY-911) draws NO border, even though it would otherwise fall back to the neutral Jira colour", () => {
+    const projectNode = { provider: "jira-project", resourceType: "project", providerCanReportStatus: false };
+    expect(borderForNode(projectNode, "light").visible).toBe(false);
   });
 });
