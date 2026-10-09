@@ -364,10 +364,10 @@ describe("GraphCache", () => {
 
     const result = await cache.getGraph();
 
-    expect(result.sizeEpic).toBe(3);
-    expect(result.sizeBug).toBe(3);
-    expect(result.sizeStory).toBe(2);
-    expect(result.sizeBase).toBe(1.5);
+    expect(result.sizeEpic).toBe(2);
+    expect(result.sizeBug).toBe(2);
+    expect(result.sizeStory).toBe(1.5);
+    expect(result.sizeBase).toBe(1);
     expect(result.linkDistance).toBe(40);
     expect(result.charge).toBe(120);
     expect(result.gravity).toBe(0.08);

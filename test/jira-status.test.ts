@@ -1,58 +1,62 @@
 import { describe, expect, test } from "bun:test";
 import {
-  JIRA_FILL_BACKLOG,
-  JIRA_FILL_DONE,
-  JIRA_FILL_IN_PROGRESS,
-  JIRA_FILL_IN_REVIEW,
-  JIRA_FILL_NEUTRAL,
-  JIRA_FILL_TODO,
-  JIRA_STATUS_FILLS,
-  jiraFillForNode,
-  jiraFillKeyForNode,
+  JIRA_BORDER_BACKLOG,
+  JIRA_BORDER_DONE,
+  JIRA_BORDER_IN_PROGRESS,
+  JIRA_BORDER_IN_REVIEW,
+  JIRA_BORDER_NEUTRAL,
+  JIRA_BORDER_TODO,
+  JIRA_STATUS_BORDERS,
+  jiraBorderForNode,
+  jiraBorderKeyForNode,
   jiraStatusLabel,
 } from "../public/jira-status.js";
 import { contrastRatio, THEME_TOKENS } from "../public/contrast.js";
 import { COLORBLIND_TYPES, rgbDistance, simulateColorblind } from "../public/colorblind.js";
 import { PROJECT_FILL } from "../public/project.js";
+import { STATUS_COLORS, CANNOT_REPORT_COLOR } from "../public/colors.js";
 
-const MIN_FILL_CONTRAST = 3; // the ticket's own threshold (item 2) — looser than the 4.5:1 text/stroke rule, appropriate for a filled shape.
-const MIN_COLORBLIND_DISTANCE = 30; // a conservative floor under the worst-case simulated pair across both themes (see FACTORY-900 palette-selection notes).
+// FACTORY-939: the Jira palette is a thin 3-4px STROKE now (border), not a filled area, so it
+// holds the same >= 4.5:1 stroke-contrast floor `--node-stroke`/`--edge`/`--arrowhead` already do
+// — tighter than FACTORY-900's >= 3:1 fill floor.
+const MIN_BORDER_CONTRAST = 4.5;
+const MIN_COLORBLIND_DISTANCE = 30; // a conservative floor under the worst-case simulated pair across both themes (see FACTORY-900 palette-selection notes, carried over).
 
-const FIVE_STATUS_KEYS = [JIRA_FILL_TODO, JIRA_FILL_BACKLOG, JIRA_FILL_IN_PROGRESS, JIRA_FILL_IN_REVIEW, JIRA_FILL_DONE];
+const FIVE_STATUS_KEYS = [JIRA_BORDER_TODO, JIRA_BORDER_BACKLOG, JIRA_BORDER_IN_PROGRESS, JIRA_BORDER_IN_REVIEW, JIRA_BORDER_DONE];
 
-describe("jiraFillKeyForNode: table-driven over every status, including custom/unknown/non-Jira", () => {
+describe("jiraBorderKeyForNode: table-driven over every status, including custom/unknown/non-Jira", () => {
   test.each([
-    ["To Do", "new", JIRA_FILL_TODO],
-    ["to do", "new", JIRA_FILL_TODO], // case-insensitive
-    ["Backlog", "new", JIRA_FILL_BACKLOG],
-    ["In Progress", "indeterminate", JIRA_FILL_IN_PROGRESS],
-    ["In Review", "indeterminate", JIRA_FILL_IN_REVIEW],
-    ["Done", "done", JIRA_FILL_DONE],
+    ["To Do", "new", JIRA_BORDER_TODO],
+    ["to do", "new", JIRA_BORDER_TODO], // case-insensitive
+    ["Backlog", "new", JIRA_BORDER_BACKLOG],
+    ["In Progress", "indeterminate", JIRA_BORDER_IN_PROGRESS],
+    ["In Review", "indeterminate", JIRA_BORDER_IN_REVIEW],
+    ["Done", "done", JIRA_BORDER_DONE],
   ])("exact status name %s -> %s", (name, category, expected) => {
-    expect(jiraFillKeyForNode({ jiraStatus: { name, category } })).toBe(expected);
+    expect(jiraBorderKeyForNode({ jiraStatus: { name, category } })).toBe(expected);
   });
 
   test.each([
-    ["Custom New Thing", "new", JIRA_FILL_TODO],
-    ["Custom Doing Thing", "indeterminate", JIRA_FILL_IN_PROGRESS],
-    ["Custom Finished Thing", "done", JIRA_FILL_DONE],
+    ["Custom New Thing", "new", JIRA_BORDER_TODO],
+    ["Custom Doing Thing", "indeterminate", JIRA_BORDER_IN_PROGRESS],
+    ["Custom Finished Thing", "done", JIRA_BORDER_DONE],
   ])("unrecognized custom status %s falls back by its statusCategory (%s) -> %s", (name, category, expected) => {
-    expect(jiraFillKeyForNode({ jiraStatus: { name, category } })).toBe(expected);
+    expect(jiraBorderKeyForNode({ jiraStatus: { name, category } })).toBe(expected);
   });
 
   test("a node with no jiraStatus at all (non-Jira provider) is neutral", () => {
-    expect(jiraFillKeyForNode({ provider: "github" })).toBe(JIRA_FILL_NEUTRAL);
-    expect(jiraFillKeyForNode({})).toBe(JIRA_FILL_NEUTRAL);
-    expect(jiraFillKeyForNode(undefined)).toBe(JIRA_FILL_NEUTRAL);
+    expect(jiraBorderKeyForNode({ provider: "github" })).toBe(JIRA_BORDER_NEUTRAL);
+    expect(jiraBorderKeyForNode({})).toBe(JIRA_BORDER_NEUTRAL);
+    expect(jiraBorderKeyForNode(undefined)).toBe(JIRA_BORDER_NEUTRAL);
   });
 });
 
-describe("jiraFillForNode / jiraStatusLabel", () => {
+describe("jiraBorderForNode / jiraStatusLabel", () => {
   test("returns the actual theme hex, not just the key", () => {
     const node = { jiraStatus: { name: "Done", category: "done" } };
-    expect(jiraFillForNode(node, "light")).toBe(JIRA_STATUS_FILLS.light[JIRA_FILL_DONE]);
-    expect(jiraFillForNode(node, "dark")).toBe(JIRA_STATUS_FILLS.dark[JIRA_FILL_DONE]);
-    expect(jiraFillForNode(node, "light")).not.toBe(jiraFillForNode(node, "dark"));
+    expect(jiraBorderForNode(node, "light")).toBe(JIRA_STATUS_BORDERS.light[JIRA_BORDER_DONE]);
+    expect(jiraBorderForNode(node, "dark")).toBe(JIRA_STATUS_BORDERS.dark[JIRA_BORDER_DONE]);
+    expect(jiraBorderForNode(node, "light")).not.toBe(jiraBorderForNode(node, "dark"));
   });
 
   test("statusLabel reports the real Jira status name, or an explicit absence", () => {
@@ -62,28 +66,28 @@ describe("jiraFillForNode / jiraStatusLabel", () => {
 
   test("a project node (FACTORY-911) always gets its own fixed PROJECT_FILL, never a Jira-status colour — even if jiraStatus were somehow present", () => {
     const projectNode = { provider: "jira-project", resourceType: "project", jiraStatus: { name: "Done", category: "done" } };
-    expect(jiraFillForNode(projectNode, "light")).toBe(PROJECT_FILL.light);
-    expect(jiraFillForNode(projectNode, "dark")).toBe(PROJECT_FILL.dark);
-    expect(jiraFillForNode(projectNode, "light")).not.toBe(JIRA_STATUS_FILLS.light[JIRA_FILL_DONE]);
+    expect(jiraBorderForNode(projectNode, "light")).toBe(PROJECT_FILL.light);
+    expect(jiraBorderForNode(projectNode, "dark")).toBe(PROJECT_FILL.dark);
+    expect(jiraBorderForNode(projectNode, "light")).not.toBe(JIRA_STATUS_BORDERS.light[JIRA_BORDER_DONE]);
   });
 });
 
-describe("Jira-status fill palette: contrast against the canvas (WCAG >= 3:1, both themes)", () => {
-  for (const [themeName, fills] of Object.entries(JIRA_STATUS_FILLS)) {
+describe("Jira-status border palette: contrast against the canvas (WCAG >= 4.5:1, both themes — FACTORY-939's stroke floor)", () => {
+  for (const [themeName, borders] of Object.entries(JIRA_STATUS_BORDERS)) {
     const bg = THEME_TOKENS[themeName as "light" | "dark"].bg;
     describe(`${themeName} theme`, () => {
-      for (const [key, hex] of Object.entries(fills)) {
+      for (const [key, hex] of Object.entries(borders)) {
         test(`${key} (${hex}) vs background (${bg})`, () => {
-          expect(contrastRatio(hex, bg)).toBeGreaterThanOrEqual(MIN_FILL_CONTRAST);
+          expect(contrastRatio(hex, bg)).toBeGreaterThanOrEqual(MIN_BORDER_CONTRAST);
         });
       }
     });
   }
 });
 
-describe("Jira-status fill palette: colour-blind-safe pairwise distance (protanopia/deuteranopia/tritanopia)", () => {
-  for (const [themeName, fillTable] of Object.entries(JIRA_STATUS_FILLS)) {
-    const fills: Record<string, string> = fillTable;
+describe("Jira-status border palette: colour-blind-safe pairwise distance (protanopia/deuteranopia/tritanopia)", () => {
+  for (const [themeName, borderTable] of Object.entries(JIRA_STATUS_BORDERS)) {
+    const borders: Record<string, string> = borderTable;
     describe(`${themeName} theme`, () => {
       const pairs: Array<[string, string]> = [];
       for (let i = 0; i < FIVE_STATUS_KEYS.length; i++) {
@@ -92,25 +96,46 @@ describe("Jira-status fill palette: colour-blind-safe pairwise distance (protano
         }
       }
 
-      test("normal vision: every pair of the five fills is visually distinct", () => {
+      test("normal vision: every pair of the five borders is visually distinct", () => {
         for (const [a, b] of pairs) {
-          const distance = rgbDistance(hexToRgb(fills[a]!), hexToRgb(fills[b]!));
+          const distance = rgbDistance(hexToRgb(borders[a]!), hexToRgb(borders[b]!));
           expect(distance).toBeGreaterThan(0);
         }
       });
 
       for (const type of COLORBLIND_TYPES) {
-        test(`${type}: every pair of the five fills stays >= ${MIN_COLORBLIND_DISTANCE} apart`, () => {
+        test(`${type}: every pair of the five borders stays >= ${MIN_COLORBLIND_DISTANCE} apart`, () => {
           for (const [a, b] of pairs) {
-            const distance = rgbDistance(simulateColorblind(fills[a]!, type), simulateColorblind(fills[b]!, type));
+            const distance = rgbDistance(simulateColorblind(borders[a]!, type), simulateColorblind(borders[b]!, type));
             expect(distance).toBeGreaterThanOrEqual(MIN_COLORBLIND_DISTANCE);
           }
         });
       }
 
       test("sanity: the distance check can actually fail (a colour against itself is zero)", () => {
-        expect(rgbDistance(hexToRgb(fills[JIRA_FILL_TODO]!), hexToRgb(fills[JIRA_FILL_TODO]!))).toBe(0);
+        expect(rgbDistance(hexToRgb(borders[JIRA_BORDER_TODO]!), hexToRgb(borders[JIRA_BORDER_TODO]!))).toBe(0);
       });
+    });
+  }
+});
+
+describe("border-vs-fill adjacency (FACTORY-939 item 3): the Jira border must stay colour-blind-distinguishable from every agent-fill colour it can sit directly against", () => {
+  const AGENT_FILLS: Record<string, string> = { ...STATUS_COLORS, cannotReport: CANNOT_REPORT_COLOR };
+
+  for (const [themeName, borderTable] of Object.entries(JIRA_STATUS_BORDERS)) {
+    const borders: Record<string, string> = borderTable;
+    describe(`${themeName} theme`, () => {
+      for (const [borderKey, borderHex] of Object.entries(borders)) {
+        for (const [agentKey, agentHex] of Object.entries(AGENT_FILLS)) {
+          test(`border ${borderKey} (${borderHex}) vs agent fill ${agentKey} (${agentHex}) stays >= ${MIN_COLORBLIND_DISTANCE} apart, every vision type`, () => {
+            expect(rgbDistance(hexToRgb(borderHex), hexToRgb(agentHex))).toBeGreaterThanOrEqual(MIN_COLORBLIND_DISTANCE);
+            for (const type of COLORBLIND_TYPES) {
+              const distance = rgbDistance(simulateColorblind(borderHex, type), simulateColorblind(agentHex, type));
+              expect(distance).toBeGreaterThanOrEqual(MIN_COLORBLIND_DISTANCE);
+            }
+          });
+        }
+      }
     });
   }
 });

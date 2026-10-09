@@ -20,6 +20,8 @@
 // prefix tolerates a renamed key without hard-coding the exact string twice.
 
 import { isProjectNode, SHAPE_PROJECT, PROJECT_SIZE } from "./project.js";
+import { outlineForNode } from "./colors.js";
+import { jiraBorderForNode } from "./jira-status.js";
 
 export const SHAPE_HEXAGON = "hexagon";
 export const SHAPE_SQUARE = "square";
@@ -72,4 +74,29 @@ export function shapeForNode(node) {
 export function sizeForNode(node) {
   if (isProjectNode(node)) return PROJECT_SIZE;
   return SHAPE_SIZES[shapeForNode(node)];
+}
+
+/**
+ * Jira-status BORDER decision for FACTORY-939 (retires public/agent-ring.js's circle-ring):
+ * Jira status moves from the node fill to a thick stroke drawn as the shape's OWN outline — never
+ * a separate ring element — so it composes with every shape, not just circular ones. The "cannot
+ * report status" dashed-outline treatment (colors.js's `outlineForNode`) returns here exactly as
+ * it drew pre-FACTORY-900: a dashed stroke on the shape itself, just now Jira-coloured instead of
+ * the plain `--node-stroke` it used to be.
+ */
+export const BORDER_WIDTH = 3.5; // within the ticket's 3-4px band.
+
+/**
+ * How to draw a node's Jira-status border. A project node (FACTORY-911) has no Jira workflow
+ * status of its own (it's a container, not a ticket) and never draws one — checked first, same
+ * as every other project-node opt-out in this file.
+ */
+export function borderForNode(node, theme) {
+  if (isProjectNode(node)) return { visible: false };
+  return {
+    visible: true,
+    stroke: jiraBorderForNode(node, theme),
+    width: BORDER_WIDTH,
+    dashed: outlineForNode(node) === "dashed",
+  };
 }

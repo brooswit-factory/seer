@@ -22,9 +22,9 @@ describe("viewer: no per-user grouping", () => {
     expect(css).not.toMatch(/hull/i);
   });
 
-  test("the agent-status ring legend (agent status colours) is still rendered", () => {
+  test("the agent-status fill legend (agent status colours) is still rendered", () => {
     const appJs = readViewerFile("app.js");
-    expect(appJs).toMatch(/renderRingLegend/);
+    expect(appJs).toMatch(/renderFillLegend/);
     expect(appJs).toMatch(/STATUS_COLORS/);
   });
 
@@ -36,16 +36,18 @@ describe("viewer: no per-user grouping", () => {
     }
   });
 
-  test("agent status moved to the ring, drawn via colors.js (unchanged) through agent-ring.js (FACTORY-900)", () => {
+  test("agent status is back on the fill, drawn directly via colors.js's colorForNode (FACTORY-939, reverting FACTORY-900's inversion)", () => {
     const appJs = readViewerFile("app.js");
-    const agentRingJs = readViewerFile("agent-ring.js");
-    expect(appJs).toMatch(/agentRingForNode/);
-    expect(agentRingJs).toMatch(/colorForNode/);
+    expect(appJs).toMatch(/colorForNode/);
+    // agent-ring.js was retired — the Jira border now lives on the shape's own stroke (shapes.js).
+    expect(appJs).not.toMatch(/agentRingForNode/);
+    expect(appJs).not.toMatch(/agent-ring\.js/);
   });
 
-  test("node fill is the Jira-status palette (public/jira-status.js), not colors.js (FACTORY-900)", () => {
+  test("node border is the Jira-status palette via shapes.js's borderForNode, not the old fill-based jiraFillForNode (FACTORY-939)", () => {
     const appJs = readViewerFile("app.js");
-    expect(appJs).toMatch(/jiraFillForNode/);
+    expect(appJs).toMatch(/borderForNode/);
+    expect(appJs).not.toMatch(/jiraFillForNode/);
   });
 
   test("the discovery dot is a fixed-radius constant, never scaled by node size (FACTORY-900 item 7)", () => {

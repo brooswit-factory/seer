@@ -3,7 +3,7 @@ import { parseGraph } from "../graph/validate.ts";
 import type { LayoutConfig, SizeConfig } from "../config/env.ts";
 
 /** Matches `loadSizeConfig()`'s own defaults — used only when a caller (e.g. a test) omits `sizeConfig`. */
-const DEFAULT_SIZE_CONFIG: SizeConfig = { epic: 3, bug: 3, story: 2, base: 1.5 };
+const DEFAULT_SIZE_CONFIG: SizeConfig = { epic: 2, bug: 2, story: 1.5, base: 1 };
 /** Matches `loadLayoutConfig()`'s own defaults — used only when a caller omits `layoutConfig`. */
 const DEFAULT_LAYOUT_CONFIG: LayoutConfig = { linkDistance: 40, charge: 120, gravity: 0.08 };
 

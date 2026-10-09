@@ -3,7 +3,7 @@ import { JIRA_RESOURCE_TYPE_SHAPES, sizeForNode } from "../public/shapes.js";
 import { scaledSizeForNode, sizeMultiplierForNode } from "../public/node-scale.js";
 import { PROJECT_SIZE } from "../public/project.js";
 
-const SIZE_CONFIG = { epic: 3, bug: 3, story: 2, base: 1.5 };
+const SIZE_CONFIG = { epic: 2, bug: 2, story: 1.5, base: 1 };
 
 const JIRA_RESOURCE_TYPES = [...Object.keys(JIRA_RESOURCE_TYPE_SHAPES), undefined /* other/unknown Jira type */];
 

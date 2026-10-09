@@ -5,7 +5,7 @@ import { ConfigError } from "./loader.ts";
  * own setting (Epic, Bug, Story), plus `base` for everything else — Task, Sub-task, any other/
  * unknown Jira issue type, and every non-Jira provider node. REPLACES the earlier live-agent size
  * bump (`SEER_SIZE_ACTIVE`) and the single flat `base` tier from FACTORY-890/900: a live agent is
- * now signalled ONLY by the agent-status ring (`public/agent-ring.js`), never by node size.
+ * now signalled ONLY by its node's fill colour (`public/colors.js`), never by node size.
  */
 export interface SizeConfig {
   epic: number;
@@ -37,11 +37,12 @@ function readPositiveEnvNumber(name: string, defaultValue: number): number {
 }
 
 /**
- * SEER_SIZE_EPIC / SEER_SIZE_BUG / SEER_SIZE_STORY / SEER_SIZE_BASE, defaulting to 3 / 3 / 2 / 1.5
- * (FACTORY-913, Brooswit HIGHEST): REPLACES FACTORY-890/900's single `SEER_SIZE_BASE`/
- * `SEER_SIZE_ACTIVE` pair — live agents are shown by the agent-status ring
- * (`public/agent-ring.js`) alone now, never by a node-size bump. Decimal values > 0 are valid
- * (`readPositiveEnvNumber` only rejects non-numeric, NaN, zero, and negative); these are
+ * SEER_SIZE_EPIC / SEER_SIZE_BUG / SEER_SIZE_STORY / SEER_SIZE_BASE, defaulting to 2 / 2 / 1.5 / 1
+ * (FACTORY-939, shrunk from FACTORY-913's 3 / 3 / 2 / 1.5 — Brooswit: the fleet-scale graph reads
+ * too large at the old tiers): REPLACES FACTORY-890/900's single `SEER_SIZE_BASE`/
+ * `SEER_SIZE_ACTIVE` pair — live agents are shown by their node's FILL colour
+ * (`public/colors.js`, FACTORY-939) alone now, never by a node-size bump. Decimal values > 0 are
+ * valid (`readPositiveEnvNumber` only rejects non-numeric, NaN, zero, and negative); these are
  * settings, not constants — the director has tweaked the size scheme repeatedly.
  *
  * `SEER_SIZE_ACTIVE` is no longer read. If it is still set in the environment (e.g. a deploy that
@@ -54,10 +55,10 @@ export function loadSizeConfig(): SizeConfig {
     console.warn("SEER_SIZE_ACTIVE is no longer used");
   }
   return {
-    epic: readPositiveEnvNumber("SEER_SIZE_EPIC", 3),
-    bug: readPositiveEnvNumber("SEER_SIZE_BUG", 3),
-    story: readPositiveEnvNumber("SEER_SIZE_STORY", 2),
-    base: readPositiveEnvNumber("SEER_SIZE_BASE", 1.5),
+    epic: readPositiveEnvNumber("SEER_SIZE_EPIC", 2),
+    bug: readPositiveEnvNumber("SEER_SIZE_BUG", 2),
+    story: readPositiveEnvNumber("SEER_SIZE_STORY", 1.5),
+    base: readPositiveEnvNumber("SEER_SIZE_BASE", 1),
   };
 }
 

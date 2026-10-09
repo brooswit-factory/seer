@@ -111,23 +111,22 @@ the untouched default (tier 4) falls back to fixture-only mode on failure.
 bundler): `index.html`, `app.js` (the force-directed graph, tooltip,
 legends, query panel), `colors.js` (the ONE herdr-verified agent-status→colour
 table, also imported directly by `test/colors.test.ts`), `jira-status.js`
-(the Jira-status→fill table, FACTORY-900 — also imported directly by
-`test/jira-status.test.ts`), `agent-ring.js` (decides the agent-status ring's
-visibility/colour/width/dash from `colors.js`, unchanged — also imported
-directly by `test/agent-ring.test.ts`), `colorblind.js` (the
-protanopia/deuteranopia/tritanopia simulation `test/jira-status.test.ts`
-checks the fill palette against), `shapes.js` (the type→shape mapping, see
-below — also imported directly by `test/shapes.test.ts`), `node-scale.js`
-(the size-multiplier table, FACTORY-913), `contrast.js` (a small WCAG
-contrast-ratio calculator, imported directly by `test/contrast.test.ts`), and
-`query-status.js` (classifies a query record as ok / zero-match / failed /
-truncated — also imported directly by its test).
+(the Jira-status→border table, FACTORY-900/FACTORY-939 — also imported
+directly by `test/jira-status.test.ts`), `shapes.js` (the type→shape mapping,
+see below, PLUS the Jira-status border decision — `borderForNode`, FACTORY-939,
+retiring FACTORY-900's `agent-ring.js` — also imported directly by
+`test/shapes.test.ts`), `colorblind.js` (the protanopia/deuteranopia/tritanopia
+simulation `test/jira-status.test.ts` checks the border palette against),
+`node-scale.js` (the size-multiplier table, FACTORY-913), `contrast.js` (a
+small WCAG contrast-ratio calculator, imported directly by
+`test/contrast.test.ts`), and `query-status.js` (classifies a query record as
+ok / zero-match / failed / truncated — also imported directly by its test).
 
-**Node shape = resource type, fill = Jira status, ring = agent status
-(FACTORY-876, FACTORY-900).** Each node is drawn as a D3 symbol whose
-*shape* is a pure function of its `resourceType` (and, for the Jira/non-Jira
-split, its `provider`) — never its hue, so the graph stays colour-blind-safe.
-The mapping (`public/shapes.js`):
+**Node shape = resource type, fill = agent status, border = Jira status
+(FACTORY-876, FACTORY-900, FACTORY-939).** Each node is drawn as a D3 symbol
+whose *shape* is a pure function of its `resourceType` (and, for the
+Jira/non-Jira split, its `provider`) — never its hue, so the graph stays
+colour-blind-safe. The mapping (`public/shapes.js`):
 
 | Resource type         | Shape           | Size tier         |
 |------------------------|-----------------|-------------------|
@@ -139,21 +138,31 @@ The mapping (`public/shapes.js`):
 | other/unknown Jira type| rounded square  | mid               |
 | any non-Jira provider  | star            | mid               |
 
-**Fill is the node's Jira workflow status** (`public/jira-status.js`,
-FACTORY-900): To Do, Backlog (a muted/desaturated version of To Do), In
-Progress, In Review, and Done each get their own colour-blind-safe,
-Okabe-Ito-derived fill, defined per light/dark theme; a custom status falls
-back to its `statusCategory` (new/indeterminate/done), and a non-Jira or
-statusless node gets neutral grey. **Agent status moved OFF the fill and
-onto a thick ring** drawn outside it (`public/agent-ring.js`) — still
-`colors.js`'s herdr colours, completely unchanged, just painted somewhere
-else; `none` draws no ring at all, and "cannot report status" draws a thin
-dashed neutral ring (the same "none vs cannot-report" distinction
-`colors.js`'s own `outlineForNode` always drew, just moved from the shape's
-own stroke to the ring). A sidebar legend shows all three mappings (type →
-shape, Jira status → fill, agent status → ring), correct in light and dark
-themes — a different thing from the per-source grouping legend FACTORY-874
-removed.
+**Fill is the node's agent status** (`public/colors.js`, unchanged since
+FACTORY-841 — reverted here from FACTORY-900's inversion): butchr's five
+`agent:*` statuses each get their own herdr-verified colour, `none` gets a
+neutral grey, and a provider that cannot report status at all shares that
+same neutral but draws a dashed border instead of a solid one (see below) —
+"cannot report" and "reports none" read the same colour, distinguished only
+by that dash, never a second grey.
+
+**Border is the node's Jira workflow status** (`public/jira-status.js` for
+the colour table, `public/shapes.js`'s `borderForNode` for how it's drawn,
+FACTORY-939, retiring FACTORY-900's agent-status ring): drawn as the shape's
+OWN outline stroke (3-4px, opaque) rather than a separate ring element, so it
+composes with every shape, not just circular ones — To Do, Backlog (a
+muted/desaturated version of To Do), In Progress, In Review, and Done each
+get their own colour-blind-safe, Okabe-Ito-derived colour, defined per
+light/dark theme; a custom status falls back to its `statusCategory`
+(new/indeterminate/done), and a non-Jira or statusless node gets neutral
+grey. The border is dashed exactly when `colors.js`'s `outlineForNode` says
+the provider cannot report agent status (the same "none vs cannot-report"
+distinction the shape's own stroke drew pre-FACTORY-900, just Jira-coloured
+now instead of the plain `--node-stroke`). A project node (FACTORY-911) has
+no Jira workflow status of its own and draws no border at all — its shape
+stays plain. A sidebar legend shows all mappings (type → shape, agent status
+→ fill, Jira status → border), correct in light and dark themes — a
+different thing from the per-source grouping legend FACTORY-874 removed.
 
 **Node size** (`SEER_SIZE_EPIC`/`SEER_SIZE_BUG`/`SEER_SIZE_STORY`/
 `SEER_SIZE_BASE`, `src/config/env.ts`, FACTORY-913): a linear size
@@ -162,13 +171,14 @@ multiplier applied to every node's per-type base size
 own tier (Epic, Bug, Story) and `base` for everything else (Task, Sub-task,
 any other/unknown Jira issue type, and every non-Jira provider node).
 REPLACES FACTORY-890/900's single `SEER_SIZE_BASE`/`SEER_SIZE_ACTIVE` pair —
-a live agent is now signalled ONLY by the agent-status ring
-(`public/agent-ring.js`), never by node size; if `SEER_SIZE_ACTIVE` is still
+a live agent is now signalled ONLY by its node's fill colour
+(`public/colors.js`), never by node size; if `SEER_SIZE_ACTIVE` is still
 set in the environment, the server logs one startup warning and otherwise
-ignores it. Defaults are `SEER_SIZE_EPIC=3`, `SEER_SIZE_BUG=3`,
-`SEER_SIZE_STORY=2`, `SEER_SIZE_BASE=1.5` — settings, not constants, tweaked
-more than once already; any positive decimal is valid (zero, negative, NaN,
-and non-numeric are rejected). The server always echoes its real configured
+ignores it. Defaults are `SEER_SIZE_EPIC=2`, `SEER_SIZE_BUG=2`,
+`SEER_SIZE_STORY=1.5`, `SEER_SIZE_BASE=1` (FACTORY-939, shrunk from
+FACTORY-913's `3`/`3`/`2`/`1.5`) — settings, not constants, tweaked more than
+once already; any positive decimal is valid (zero, negative, NaN, and
+non-numeric are rejected). The server always echoes its real configured
 values on `/graph.json` (`sizeEpic`/`sizeBug`/`sizeStory`/`sizeBase`), and
 the viewer's size legend reads them from there rather than hardcoding a
 number. The link-discovered hollow dot (`circle.discovery-dot`) is a fixed

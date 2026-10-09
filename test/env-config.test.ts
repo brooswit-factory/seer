@@ -18,8 +18,8 @@ afterEach(() => {
 });
 
 describe("loadSizeConfig", () => {
-  test("defaults to epic=3, bug=3, story=2, base=1.5 when unset (FACTORY-913)", () => {
-    expect(loadSizeConfig()).toEqual({ epic: 3, bug: 3, story: 2, base: 1.5 });
+  test("defaults to epic=2, bug=2, story=1.5, base=1 when unset (FACTORY-939, shrunk from FACTORY-913's 3/3/2/1.5)", () => {
+    expect(loadSizeConfig()).toEqual({ epic: 2, bug: 2, story: 1.5, base: 1 });
   });
 
   test("reads valid env overrides for every setting", () => {
@@ -73,7 +73,7 @@ describe("loadSizeConfig", () => {
     test("has no effect on the resolved config, but logs one startup warning when set", () => {
       process.env.SEER_SIZE_ACTIVE = "9.5";
       const config = loadSizeConfig();
-      expect(config).toEqual({ epic: 3, bug: 3, story: 2, base: 1.5 });
+      expect(config).toEqual({ epic: 2, bug: 2, story: 1.5, base: 1 });
       expect(warnCalls).toEqual([["SEER_SIZE_ACTIVE is no longer used"]]);
     });
 
