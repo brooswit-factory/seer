@@ -98,17 +98,6 @@ function escapeHtml(s) {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 }
 
-function fattenedPoints(nodes, radius, segments = 10) {
-  const pts = [];
-  for (const n of nodes) {
-    for (let i = 0; i < segments; i++) {
-      const theta = (i / segments) * 2 * Math.PI;
-      pts.push([n.x + radius * Math.cos(theta), n.y + radius * Math.sin(theta)]);
-    }
-  }
-  return pts;
-}
-
 function edgeKey(e) {
   const source = typeof e.source === "object" ? e.source.id : e.source;
   const target = typeof e.target === "object" ? e.target.id : e.target;
@@ -150,7 +139,6 @@ function renderGraph(initialGraph) {
     .attr("class", "edge-arrowhead")
     .attr("d", "M0,0 L10,5 L0,10 z");
 
-  const hullLayer = root.append("g").attr("class", "hulls");
   const edgeLayer = root.append("g").attr("class", "edges");
   const nodeLayer = root.append("g").attr("class", "nodes");
   const tooltip = document.getElementById("tooltip");
@@ -251,42 +239,6 @@ function renderGraph(initialGraph) {
       .attr("marker-end", "url(#seer-arrowhead)");
   }
 
-  const sourceIds = new Set();
-  const hullColor = d3.scaleOrdinal(d3.schemeTableau10);
-  let hullGroups = [];
-
-  function renderHulls() {
-    const ids = [...sourceIds];
-    hullColor.domain(ids);
-    const sel = hullLayer.selectAll("g.hull-group").data(ids, (id) => id);
-    sel.exit().remove();
-    const entered = sel.enter().append("g").attr("class", "hull-group");
-    entered.append("path").attr("class", "hull");
-    entered.append("text").attr("class", "hull-label");
-
-    hullGroups = [];
-    entered.merge(sel).each(function (id) {
-      const g = d3.select(this);
-      g.select("path.hull").attr("fill", hullColor(id)).attr("stroke", hullColor(id));
-      g.select("text.hull-label").text(id);
-      hullGroups.push({ id, path: g.select("path.hull"), label: g.select("text.hull-label") });
-    });
-  }
-
-  function updateHulls() {
-    for (const group of hullGroups) {
-      const groupNodes = nodes.filter((n) => n.ownerSourceId === group.id);
-      const pts = fattenedPoints(groupNodes, NODE_RADIUS + 18);
-      const hull = d3.polygonHull(pts);
-      if (hull) {
-        group.path.attr("d", `M${hull.map((p) => p.join(",")).join("L")}Z`);
-        const [lx, ly] = d3.polygonCentroid(hull);
-        const top = d3.min(hull, (p) => p[1]);
-        group.label.attr("x", lx).attr("y", top - 6);
-      }
-    }
-  }
-
   let nodeSel = nodeLayer.selectAll("g.node");
 
   simulation.on("tick", () => {
@@ -296,7 +248,6 @@ function renderGraph(initialGraph) {
       .attr("x2", (d) => d.target.x)
       .attr("y2", (d) => d.target.y);
     nodeSel.attr("transform", (d) => `translate(${d.x},${d.y})`);
-    updateHulls();
   });
 
   function apply(graph) {
@@ -328,9 +279,6 @@ function renderGraph(initialGraph) {
       }
     }
 
-    sourceIds.clear();
-    for (const n of nodes) sourceIds.add(n.ownerSourceId);
-
     const incomingLinks = graph.edges.filter((e) => incomingIds.has(e.source) && incomingIds.has(e.target));
     const previousLinkKeys = new Set(links.map(edgeKey));
     const nextLinkKeys = new Set(incomingLinks.map((e) => `${e.source}|${e.target}|${e.kind}`));
@@ -342,7 +290,6 @@ function renderGraph(initialGraph) {
 
     nodeSel = renderNodeSelection();
     renderEdgeSelection();
-    renderHulls();
 
     if (added || removed || linksChanged) {
       // A gentle reheat, NOT `.alpha(1).restart()` — existing nodes keep their current x/y as

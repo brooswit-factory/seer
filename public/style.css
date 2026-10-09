@@ -195,18 +195,6 @@ header .timestamp.stale {
   color: var(--muted);
 }
 
-.hull {
-  fill-opacity: 0.12;
-  stroke-width: 1.5;
-  stroke-opacity: 0.6;
-}
-
-.hull-label {
-  font-size: 11px;
-  fill: var(--muted);
-  pointer-events: none;
-}
-
 /* Edges and arrowheads: fully opaque, >= 4.5:1 against --bg in both themes (see header comment). */
 .edge {
   stroke: var(--edge);
