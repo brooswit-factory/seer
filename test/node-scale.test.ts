@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { JIRA_RESOURCE_TYPE_SHAPES, sizeForNode } from "../public/shapes.js";
 import { isLiveAgentNode, scaledSizeForNode, sizeMultiplierForNode } from "../public/node-scale.js";
+import { PROJECT_SIZE } from "../public/project.js";
 
 const SIZE_CONFIG = { base: 1.5, active: 2 };
 
@@ -54,6 +55,17 @@ describe("sizeMultiplierForNode / scaledSizeForNode: table-driven over every sta
       });
     }
   }
+
+  test("a project node (FACTORY-911) is NEVER scaled by SEER_SIZE_BASE/ACTIVE — scaledSizeForNode returns its fixed PROJECT_SIZE regardless of agentStatus", () => {
+    for (const agentStatus of AGENT_STATUSES) {
+      for (const providerCanReportStatus of [true, false]) {
+        const projectNode = { provider: "jira-project", resourceType: "project", agentStatus, providerCanReportStatus };
+        expect(scaledSizeForNode(projectNode, SIZE_CONFIG)).toBe(PROJECT_SIZE);
+        // Also true against a config whose multipliers would otherwise obviously change the area.
+        expect(scaledSizeForNode(projectNode, { base: 10, active: 20 })).toBe(PROJECT_SIZE);
+      }
+    }
+  });
 
   test("every scaled size is a positive, finite number", () => {
     for (const resourceType of RESOURCE_TYPES) {

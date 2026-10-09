@@ -18,8 +18,10 @@ export type AgentStatus = z.infer<typeof AgentStatusSchema>;
  * - "relates": a generic, undirected relationship
  * - "parent": a native parent/child hierarchy (e.g. Epic -> Story)
  * - "link": any other link-expansion hop not covered above
+ * - "contains": a synthesised Jira project node -> one of its Epics (FACTORY-911); never drawn
+ *   between two real Jira resources, always from a "jira-project" node outward.
  */
-export const EdgeKindSchema = z.enum(["implements", "blocks", "relates", "parent", "link"]);
+export const EdgeKindSchema = z.enum(["implements", "blocks", "relates", "parent", "link", "contains"]);
 export type EdgeKind = z.infer<typeof EdgeKindSchema>;
 
 /**

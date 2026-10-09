@@ -45,4 +45,9 @@ describe("agentRingForNode: table-driven over every agentStatus x providerCanRep
     expect(none.visible).toBe(false);
     expect(cannotReport.visible).toBe(true);
   });
+
+  test("a project node (FACTORY-911) draws NO ring, even though its own providerCanReportStatus/agentStatus would otherwise read as 'cannot report'", () => {
+    const projectNode = { provider: "jira-project", resourceType: "project", agentStatus: "none", providerCanReportStatus: false };
+    expect(agentRingForNode(projectNode).visible).toBe(false);
+  });
 });

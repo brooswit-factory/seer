@@ -12,6 +12,7 @@
 // area by `m * m`.
 
 import { sizeForNode } from "./shapes.js";
+import { isProjectNode } from "./project.js";
 
 export const LIVE_AGENT_STATUSES = Object.freeze(["working", "blocked", "idle", "stalled"]);
 
@@ -25,8 +26,14 @@ export function sizeMultiplierForNode(node, sizeConfig) {
   return isLiveAgentNode(node) ? sizeConfig.active : sizeConfig.base;
 }
 
-/** The node's final area (d3-symbol units): its per-type base area (shapes.js) scaled by the squared linear multiplier. */
+/**
+ * The node's final area (d3-symbol units): its per-type base area (shapes.js) scaled by the
+ * squared linear multiplier — EXCEPT a project node (FACTORY-911), whose fixed size is never
+ * multiplied by SEER_SIZE_BASE/ACTIVE at all (it has no agent to report a live/base status for
+ * in the first place).
+ */
 export function scaledSizeForNode(node, sizeConfig) {
+  if (isProjectNode(node)) return sizeForNode(node);
   const multiplier = sizeMultiplierForNode(node, sizeConfig);
   return sizeForNode(node) * multiplier * multiplier;
 }

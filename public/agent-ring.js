@@ -4,6 +4,7 @@
 // colour itself. Pure and DOM/D3-free, like shapes.js and colors.js, so the ring decision is
 // testable over every agentStatus without a browser.
 import { colorForNode, outlineForNode } from "./colors.js";
+import { isProjectNode } from "./project.js";
 
 /** Normal ring stroke width (px) — within the ticket's 3-4px band. */
 export const RING_WIDTH = 3.5;
@@ -17,6 +18,9 @@ export const RING_WIDTH_THIN = 1.5;
  * `outlineForNode`) stay visually distinct here too, not collapsed into one look.
  */
 export function agentRingForNode(node) {
+  // A project node (FACTORY-911) has no agent status at all — not "cannot report", not "reports
+  // none" — so it draws no ring whatsoever, checked before either of those two look-alike cases.
+  if (isProjectNode(node)) return { visible: false };
   if (node?.providerCanReportStatus && node?.agentStatus === "none") {
     return { visible: false };
   }
