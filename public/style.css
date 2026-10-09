@@ -28,6 +28,10 @@
      against this theme's --bg — just under the 4.5:1 floor), so this is its own token rather
      than a reuse. #5c5f77 vs #eff1f5 = 5.53:1 (test/contrast.test.ts verifies this). */
   --node-label-muted: #5c5f77;
+  /* FACTORY-982 item 3: opacity/stroke-opacity for a non-focus node/edge's `.dimmed` class below —
+     a single shared constant (not per-theme) since it's a fraction of whatever the theme's own
+     colour already is, not a hardcoded colour itself. */
+  --dim-opacity: 0.35;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -431,6 +435,38 @@ header .timestamp.stale {
 .node-label-name {
   font-size: 8px;
   fill: var(--node-label-muted);
+}
+
+/*
+ * FACTORY-982 item 3: visual priority for the focus group (selected node + its direct neighbours)
+ * on select — every other node/edge gets `.dimmed` (app.js's `updateFocusDimClasses`/
+ * `updateFocusEdgeDimClasses`), never a full-element `opacity` on `.node`/`.edge` themselves: SVG
+ * opacity composites an element's entire subtree as one layer, so dimming the GROUP would dim its
+ * child `<text>` right along with it with no way for the text to opt back out. Instead this only
+ * ever targets the shape/border paths directly — `.node-label`/`.node-label-name` are deliberately
+ * untouched, so a dimmed node's label stays at its already-verified contrast (test/contrast.test.ts)
+ * instead of fading toward the canvas colour and failing it. `--dim-opacity` (declared in the
+ * theme-token `:root` block at the top of this file, alongside `--edge`/`--node-stroke`/etc) is
+ * this feature's one tunable config constant — named alongside `SEER_SIZE_*`/`layoutConfig` in
+ * app.js, which live in JS since they drive the force simulation; this one is pure CSS, so it
+ * lives here instead.
+ */
+.node.dimmed .node-shape,
+.node.dimmed .node-border-ring,
+.node.dimmed .node-border-gap {
+  opacity: var(--dim-opacity);
+}
+
+/*
+ * Dimmed edges: deliberately below the edge/arrowhead >= 4.5:1 floor the base `--edge` token holds
+ * (same deliberate trade-off `.edge.contains` above already documents at 0.7 stroke-opacity/3:1+) —
+ * a dimmed edge is MEANT to read as de-emphasized, not as a second full-strength edge style, and
+ * `test/contrast.test.ts` only gates the base (undimmed) `--edge` token, not this derived class.
+ * Placed after `.edge.contains` so an edge carrying BOTH classes (a dimmed `contains` edge) uses
+ * this, more-dimmed value — same specificity (two classes), source order breaks the tie.
+ */
+.edge.dimmed {
+  stroke-opacity: var(--dim-opacity);
 }
 
 .admission-ring {
