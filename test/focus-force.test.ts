@@ -101,9 +101,13 @@ describe("createFocusForce (d3-force-shaped wrapper)", () => {
   });
 
   test("a tick with an active selection nudges non-focus node velocity, leaves focus nodes untouched", () => {
+    // "other" sits at 40px from the single-node focus group — inside the default falloff radius
+    // (FOCUS_FALLOFF_RADIUS_RATIO x the FOCUS_MIN_GROUP_RADIUS floor of 20 = 60px), so it gets a
+    // nonzero push; a node placed BEYOND the falloff radius correctly gets none (see focusTargets'
+    // own "well beyond the falloff radius" test above) — this one is deliberately closer in.
     const nodes = [
       { id: "focus", x: 0, y: 0, vx: 0, vy: 0 },
-      { id: "other", x: 100, y: 0, vx: 0, vy: 0 },
+      { id: "other", x: 40, y: 0, vx: 0, vy: 0 },
     ];
     const focusIds = new Set(["focus"]);
     const basePositions = new Map(nodes.map((n) => [n.id, { x: n.x, y: n.y }]));
