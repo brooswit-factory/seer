@@ -85,7 +85,8 @@ async function runServe() {
     sanitizeError,
   });
 
-  startServer({ port: config?.port ?? 4173, graphCache });
+  const collectTimeoutSeconds = config?.collectTimeoutSeconds ?? 60;
+  startServer({ port: config?.port ?? 4173, graphCache, idleTimeoutSeconds: collectTimeoutSeconds + 5 });
 }
 
 function tryLoadConfig(): SeerConfig | null {
