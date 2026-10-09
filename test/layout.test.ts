@@ -169,7 +169,7 @@ describe("real-data layout + 5 project nodes still fits a 1440x900 viewport", ()
     edges: [...fixture.edges, ...containsEdges],
   };
 
-  function linkDistanceForLink(link: { kind?: string }) {
+  function linkDistanceForLink(link: any) {
     return link.kind === "contains" ? PROJECT_LINK_DISTANCE : LAYOUT_CONFIG.linkDistance;
   }
 
