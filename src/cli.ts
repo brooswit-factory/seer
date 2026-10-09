@@ -38,7 +38,12 @@ function readJiraEnv() {
 }
 
 async function runCollect(argv: string[], positional: string | undefined) {
-  const resolved = resolveConfigPath({ args: argv, env: process.env, positional, defaultPath: DEFAULT_CONFIG_PATH });
+  const resolved = resolveConfigPath({
+    args: argv,
+    env: process.env,
+    ...(positional !== undefined ? { positional } : {}),
+    defaultPath: DEFAULT_CONFIG_PATH,
+  });
   const config = loadConfig(resolved.path); // throws a clear ConfigError if unreadable — always, flag/env/positional alike
   const { baseUrl, email, apiToken } = readJiraEnv();
   if (!baseUrl || !email || !apiToken) {
