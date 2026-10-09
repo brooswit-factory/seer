@@ -17,7 +17,7 @@ describe("sortNodesForSidebar (FACTORY-957 item 1)", () => {
       node("github:gh-1", "pull-request", "github"),
       node("jira-work:TASK-1", "Task"),
     ];
-    const sorted = sortNodesForSidebar(nodes).map((n) => n.id);
+    const sorted = sortNodesForSidebar(nodes).map((n: { id: string }) => n.id);
     expect(sorted).toEqual([
       "jira-work:EPIC-1",
       "jira-work:STORY-1",
@@ -32,7 +32,7 @@ describe("sortNodesForSidebar (FACTORY-957 item 1)", () => {
 
   test("an unrecognized/missing resourceType lands in the 'others' tier, not 'unknown crashes'", () => {
     const nodes = [node("jira-work:X-1", undefined), node("jira-work:EPIC-1", "Epic")];
-    expect(sortNodesForSidebar(nodes).map((n) => n.id)).toEqual(["jira-work:EPIC-1", "jira-work:X-1"]);
+    expect(sortNodesForSidebar(nodes).map((n: { id: string }) => n.id)).toEqual(["jira-work:EPIC-1", "jira-work:X-1"]);
   });
 
   test("does not mutate the input array", () => {
@@ -56,15 +56,15 @@ describe("filterNodesForSidebar (FACTORY-957 item 1: text filter box)", () => {
   });
 
   test("matches against id (the sidebar's 'key'), case-insensitively", () => {
-    expect(filterNodesForSidebar(nodes, "factory-859").map((n) => n.id)).toEqual(["jira-work:FACTORY-859"]);
+    expect(filterNodesForSidebar(nodes, "factory-859").map((n: { id: string }) => n.id)).toEqual(["jira-work:FACTORY-859"]);
   });
 
   test("matches against label, case-insensitively", () => {
-    expect(filterNodesForSidebar(nodes, "VIEWER").map((n) => n.id)).toEqual(["jira-work:FACTORY-859"]);
+    expect(filterNodesForSidebar(nodes, "VIEWER").map((n: { id: string }) => n.id)).toEqual(["jira-work:FACTORY-859"]);
   });
 
   test("substring match, not exact/prefix-only", () => {
-    expect(filterNodesForSidebar(nodes, "colour").map((n) => n.id)).toEqual(["jira-work:FACTORY-900"]);
+    expect(filterNodesForSidebar(nodes, "colour").map((n: { id: string }) => n.id)).toEqual(["jira-work:FACTORY-900"]);
   });
 
   test("no match -> empty array", () => {
