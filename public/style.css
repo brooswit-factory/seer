@@ -137,6 +137,10 @@ header .timestamp.stale {
   border-width: 2px;
 }
 
+.shape-icon {
+  flex-shrink: 0;
+}
+
 .query-row {
   padding: 6px 8px;
   border-radius: 4px;
@@ -211,11 +215,6 @@ header .timestamp.stale {
   font-size: 10px;
   fill: var(--fg);
   pointer-events: none;
-}
-
-.node-circle {
-  stroke: var(--node-stroke);
-  stroke-width: 1.75px;
 }
 
 .admission-ring {
