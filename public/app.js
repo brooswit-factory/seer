@@ -371,7 +371,7 @@ function renderProjectLegend() {
   el.innerHTML = [
     "<h2>Project</h2>",
     `<div class="legend-row">${shapeSvg}<span>Jira project (fixed shape/colour, no status ring, size never scales)</span></div>`,
-    `<div class="legend-row">${lineSvg}<span>contains (project → Epic)</span></div>`,
+    `<div class="legend-row">${lineSvg}<span>contains (project → Epics and Bugs)</span></div>`,
   ].join("");
 }
 
@@ -629,9 +629,20 @@ function renderGraph(initialGraph, { onNodeClick, onBackgroundClick } = {}) {
       });
   }
 
-  /** Count of `contains` edges out of a project node — FACTORY-911 item 4's "number of Epics" tooltip field. */
+  /**
+   * Count of `contains` edges out of a project node whose target is specifically an Epic —
+   * FACTORY-911 item 4's "number of Epics" tooltip field. `contains` also reaches non-Done Bugs
+   * now (FACTORY-977), so this filters by the target's own `resourceType` rather than just
+   * counting every `contains` edge, or a project with Bugs would inflate this "epics" figure.
+   */
   function epicCountForProject(projectId) {
-    return links.filter((l) => l.kind === "contains" && (typeof l.source === "object" ? l.source.id : l.source) === projectId).length;
+    return links.filter((l) => {
+      if (l.kind !== "contains") return false;
+      const sourceId = typeof l.source === "object" ? l.source.id : l.source;
+      if (sourceId !== projectId) return false;
+      const targetId = typeof l.target === "object" ? l.target.id : l.target;
+      return nodeById.get(targetId)?.resourceType === "Epic";
+    }).length;
   }
 
   // Content is built by `nodeInfoHtml` (public/node-info.js) — a pure function of the datum `d`,

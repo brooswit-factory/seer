@@ -133,12 +133,16 @@ export async function collect(config: SeerConfig, providers: Record<string, Prov
     ...(match.jiraStatus !== undefined ? { jiraStatus: match.jiraStatus } : {}),
   }));
 
-  // Project nodes (FACTORY-911): synthesised from any match's `project` field, never fetched as
-  // their own query hit — one node per distinct project key that has at least one ticket node in
-  // the graph, a `contains` edge to every Epic of that project already present (query- or
-  // link-discovered alike), and nothing else. `ownerSourceId` is the owning source of whichever
-  // of that project's tickets was attributed first, so a project still groups sensibly under the
-  // compact-layout hull even though it was never itself matched by a query.
+  // Project nodes (FACTORY-911, extended by FACTORY-977): synthesised from any match's `project`
+  // field, never fetched as their own query hit — one node per distinct project key that has at
+  // least one ticket node in the graph, a `contains` edge to every Epic of that project already
+  // present (query- or link-discovered alike) PLUS every non-Done Bug of that project (every Bug
+  // is a member of its project by Jira membership, whether or not it also carries its own
+  // Implements link to an Epic — that link, if present, is left untouched), and nothing else:
+  // never a Story/Task, which hang off their Bug/Epic via Implements instead. `ownerSourceId` is
+  // the owning source of whichever of that project's tickets was attributed first, so a project
+  // still groups sensibly under the compact-layout hull even though it was never itself matched
+  // by a query.
   const projectsByKey = new Map<string, { name: string; url: string; ownerSourceId: string }>();
   for (const { match, ownerSourceId } of byId.values()) {
     if (!match.project || projectsByKey.has(match.project.key)) continue;
@@ -161,7 +165,10 @@ export async function collect(config: SeerConfig, providers: Record<string, Prov
   }
 
   for (const { match } of byId.values()) {
-    if (match.resourceType !== "Epic" || !match.project) continue;
+    if (!match.project) continue;
+    const isEpic = match.resourceType === "Epic";
+    const isOpenBug = match.resourceType === "Bug" && match.jiraStatus?.category !== "done";
+    if (!isEpic && !isOpenBug) continue;
     addEdge(`jira-project:${match.project.key}`, match.id, "contains");
   }
 

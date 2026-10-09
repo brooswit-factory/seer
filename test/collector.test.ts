@@ -279,18 +279,84 @@ describe("collect", () => {
       expect(graph.edges.some((e) => e.kind === "contains")).toBe(false);
     });
 
-    test("a non-Epic ticket never gets a contains edge, even though it carries a project", async () => {
+    test("a non-Epic, non-Bug ticket never gets a contains edge, even though it carries a project", async () => {
       const config = configWith([
         { id: "a@m1", machine: "m1", user: "a", displayName: "A", queries: [{ provider: "stub", query: "qa" }] },
       ]);
       const project = { key: "FACTORY", name: "factory", url: "https://example.com/browse/FACTORY" };
       const provider = new StubProvider({
-        qa: { matches: [match("STORY-1", { resourceType: "Story", project })] },
+        qa: { matches: [match("STORY-1", { resourceType: "Story", project }), match("TASK-1", { resourceType: "Task", project })] },
       });
 
       const graph = await collect(config, { stub: provider }, { resultCap: 50 });
 
       expect(graph.edges.some((e) => e.target === "stub:STORY-1")).toBe(false);
+      expect(graph.edges.some((e) => e.target === "stub:TASK-1")).toBe(false);
+    });
+
+    test("FACTORY-977: a non-Done Bug gets a contains edge from its project, with or without its own Epic link", async () => {
+      const config = configWith([
+        { id: "a@m1", machine: "m1", user: "a", displayName: "A", queries: [{ provider: "stub", query: "qa" }] },
+      ]);
+      const project = { key: "FACTORY", name: "factory", url: "https://example.com/browse/FACTORY" };
+      const provider = new StubProvider({
+        qa: {
+          matches: [
+            match("BUG-1", { resourceType: "Bug", project, jiraStatus: { name: "To Do", category: "new" } }),
+            match("BUG-2", {
+              resourceType: "Bug",
+              project,
+              jiraStatus: { name: "In Progress", category: "indeterminate" },
+              links: [{ targetId: "stub:EPIC-1", kind: "implements" }],
+            }),
+            match("EPIC-1", { resourceType: "Epic", project }),
+          ],
+        },
+      });
+
+      const graph = await collect(config, { stub: provider }, { resultCap: 50 });
+
+      expect(graph.edges).toContainEqual({ source: "jira-project:FACTORY", target: "stub:BUG-1", kind: "contains" });
+      expect(graph.edges).toContainEqual({ source: "jira-project:FACTORY", target: "stub:BUG-2", kind: "contains" });
+      // The Bug's own Implements link to its Epic is kept, not hidden seer-side.
+      expect(graph.edges).toContainEqual({ source: "stub:BUG-2", target: "stub:EPIC-1", kind: "implements" });
+    });
+
+    test("FACTORY-977: a Done Bug never gets a contains edge", async () => {
+      const config = configWith([
+        { id: "a@m1", machine: "m1", user: "a", displayName: "A", queries: [{ provider: "stub", query: "qa" }] },
+      ]);
+      const project = { key: "FACTORY", name: "factory", url: "https://example.com/browse/FACTORY" };
+      const provider = new StubProvider({
+        qa: { matches: [match("BUG-DONE", { resourceType: "Bug", project, jiraStatus: { name: "Done", category: "done" } })] },
+      });
+
+      const graph = await collect(config, { stub: provider }, { resultCap: 50 });
+
+      expect(graph.edges.some((e) => e.target === "stub:BUG-DONE")).toBe(false);
+    });
+
+    test("FACTORY-977: a non-Done Bug in a different project only gets a contains edge from its own project", async () => {
+      const config = configWith([
+        { id: "a@m1", machine: "m1", user: "a", displayName: "A", queries: [{ provider: "stub", query: "qa" }] },
+      ]);
+      const projectA = { key: "FACTORY", name: "factory", url: "https://example.com/browse/FACTORY" };
+      const projectB = { key: "OTHER", name: "other", url: "https://example.com/browse/OTHER" };
+      const provider = new StubProvider({
+        qa: {
+          matches: [
+            match("BUG-A", { resourceType: "Bug", project: projectA, jiraStatus: { name: "To Do", category: "new" } }),
+            match("BUG-B", { resourceType: "Bug", project: projectB, jiraStatus: { name: "To Do", category: "new" } }),
+          ],
+        },
+      });
+
+      const graph = await collect(config, { stub: provider }, { resultCap: 50 });
+
+      expect(graph.edges).toContainEqual({ source: "jira-project:FACTORY", target: "stub:BUG-A", kind: "contains" });
+      expect(graph.edges).toContainEqual({ source: "jira-project:OTHER", target: "stub:BUG-B", kind: "contains" });
+      expect(graph.edges.some((e) => e.source === "jira-project:FACTORY" && e.target === "stub:BUG-B")).toBe(false);
+      expect(graph.edges.some((e) => e.source === "jira-project:OTHER" && e.target === "stub:BUG-A")).toBe(false);
     });
 
     test("no project field on any match means no project node at all", async () => {
