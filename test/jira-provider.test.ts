@@ -28,7 +28,7 @@ describe("JiraProvider.runQuery", () => {
       calledUrl = String(url);
       calledMethod = init?.method ?? "GET";
       return new Response(JSON.stringify({ issues: [issue("X-1")], isLast: true }), { status: 200 });
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
 
     const provider = new JiraProvider({ baseUrl: "https://example.atlassian.net", email: "a@b.com", apiToken: "tok", fetchImpl });
     await provider.runQuery("project = X", 10);
@@ -43,7 +43,7 @@ describe("JiraProvider.runQuery", () => {
       new Response(
         JSON.stringify({ issues: [issue("X-1", { labels: ["agent:blocked"] }), issue("X-2", { labels: ["some-other-label"] })], isLast: true }),
         { status: 200 },
-      )) as typeof fetch;
+      )) as unknown as typeof fetch;
     const provider = new JiraProvider({ baseUrl: "https://example.atlassian.net", email: "a@b.com", apiToken: "tok", fetchImpl });
 
     const { matches } = await provider.runQuery("q", 10);
@@ -55,7 +55,7 @@ describe("JiraProvider.runQuery", () => {
 
   test("admission:withheld label sets admissionWithheld", async () => {
     const fetchImpl = (async () =>
-      new Response(JSON.stringify({ issues: [issue("X-1", { labels: ["admission:withheld"] })], isLast: true }), { status: 200 })) as typeof fetch;
+      new Response(JSON.stringify({ issues: [issue("X-1", { labels: ["admission:withheld"] })], isLast: true }), { status: 200 })) as unknown as typeof fetch;
     const provider = new JiraProvider({ baseUrl: "https://example.atlassian.net", email: "a@b.com", apiToken: "tok", fetchImpl });
 
     const { matches } = await provider.runQuery("q", 10);
@@ -76,7 +76,7 @@ describe("JiraProvider.runQuery", () => {
           isLast: true,
         }),
         { status: 200 },
-      )) as typeof fetch;
+      )) as unknown as typeof fetch;
     const provider = new JiraProvider({ baseUrl: "https://example.atlassian.net", email: "a@b.com", apiToken: "tok", fetchImpl });
 
     const { matches } = await provider.runQuery("q", 10);
@@ -92,7 +92,7 @@ describe("JiraProvider.runQuery", () => {
       // the endpoint reports no total — the provider must request cap+1 itself to detect this
       expect(String(url)).toContain("maxResults=3");
       return new Response(JSON.stringify({ issues: [issue("X-1"), issue("X-2"), issue("X-3")], isLast: false }), { status: 200 });
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
     const provider = new JiraProvider({ baseUrl: "https://example.atlassian.net", email: "a@b.com", apiToken: "tok", fetchImpl });
 
     const { matches, truncated } = await provider.runQuery("q", 2);
@@ -103,7 +103,7 @@ describe("JiraProvider.runQuery", () => {
 
   test("exactly cap results is NOT truncated", async () => {
     const fetchImpl = (async () =>
-      new Response(JSON.stringify({ issues: [issue("X-1"), issue("X-2")], isLast: true }), { status: 200 })) as typeof fetch;
+      new Response(JSON.stringify({ issues: [issue("X-1"), issue("X-2")], isLast: true }), { status: 200 })) as unknown as typeof fetch;
     const provider = new JiraProvider({ baseUrl: "https://example.atlassian.net", email: "a@b.com", apiToken: "tok", fetchImpl });
 
     const { matches, truncated } = await provider.runQuery("q", 2);
@@ -113,7 +113,7 @@ describe("JiraProvider.runQuery", () => {
   });
 
   test("a non-ok response throws with the status in the message", async () => {
-    const fetchImpl = (async () => new Response("unauthorized", { status: 401, statusText: "Unauthorized" })) as typeof fetch;
+    const fetchImpl = (async () => new Response("unauthorized", { status: 401, statusText: "Unauthorized" })) as unknown as typeof fetch;
     const provider = new JiraProvider({ baseUrl: "https://example.atlassian.net", email: "a@b.com", apiToken: "tok", fetchImpl });
 
     await expect(provider.runQuery("q", 10)).rejects.toThrow(/401/);
@@ -126,7 +126,7 @@ describe("JiraProvider.fetchById", () => {
     const fetchImpl = (async (url: string | URL) => {
       calledUrl = String(url);
       return new Response(JSON.stringify(issue("X-9")), { status: 200 });
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
     const provider = new JiraProvider({ baseUrl: "https://example.atlassian.net", email: "a@b.com", apiToken: "tok", fetchImpl });
 
     const match = await provider.fetchById("jira-work:X-9");
@@ -140,7 +140,7 @@ describe("JiraProvider.fetchById", () => {
     const fetchImpl = (async () => {
       called = true;
       return new Response("{}", { status: 200 });
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
     const provider = new JiraProvider({ baseUrl: "https://example.atlassian.net", email: "a@b.com", apiToken: "tok", fetchImpl });
 
     const match = await provider.fetchById("github:owner/repo/pull/1");
@@ -150,7 +150,7 @@ describe("JiraProvider.fetchById", () => {
   });
 
   test("returns null on a 404 rather than throwing", async () => {
-    const fetchImpl = (async () => new Response("not found", { status: 404 })) as typeof fetch;
+    const fetchImpl = (async () => new Response("not found", { status: 404 })) as unknown as typeof fetch;
     const provider = new JiraProvider({ baseUrl: "https://example.atlassian.net", email: "a@b.com", apiToken: "tok", fetchImpl });
 
     const match = await provider.fetchById("jira-work:X-404");
