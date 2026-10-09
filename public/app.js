@@ -9,6 +9,8 @@ import { nodeInfoHtml, escapeHtml } from "./node-info.js";
 import { createSelectionState, select as selectNode, deselect as deselectNode, reconcileSelection } from "./selection.js";
 import { sortNodesForSidebar, filterNodesForSidebar } from "./sidebar-list.js";
 import { splitNodeLabel, maxCharsForRadius, truncateToChars, line1Dy, labelBottomExtent, LINE2_FONT_SCALE, LINE_SPACING_PX } from "./node-label.js";
+import { animationClassFor, staggerDelayMs, PULSE_BODY_WORKING, PULSE_BORDER_STALLED, PULSE_BORDER_BLOCKED } from "./agent-animation.js";
+import { loadAnimationsEnabled, saveAnimationsEnabled } from "./animation-prefs.js";
 
 /** Extra radius (px), on top of the admission ring's own gap, the selection halo (FACTORY-957 item 4) is drawn at — distinct from `ADMISSION_RING_GAP` below so the two rings never collide even when a node has both. */
 const SELECTION_HALO_GAP = 13;
@@ -177,6 +179,25 @@ async function main() {
       selectionState = deselectNode(selectionState);
       syncSelectionUI();
     },
+  });
+
+  // Agent-status pulse pause/toggle (FACTORY-975/FACTORY-974's ACCESSIBILITY/CONTROLS item) —
+  // restore the persisted preference before wiring the button so a muted session stays muted
+  // across a reload, then keep the button's own label/aria-pressed and `renderGraph`'s live
+  // classes in sync on every click.
+  let animationsEnabled = loadAnimationsEnabled();
+  graphApi.setAnimationsEnabled(animationsEnabled);
+  const animationToggleButton = document.getElementById("animation-toggle");
+  function syncAnimationToggleUI() {
+    animationToggleButton.setAttribute("aria-pressed", String(animationsEnabled));
+    animationToggleButton.textContent = animationsEnabled ? "Pulses: on" : "Pulses: off";
+  }
+  syncAnimationToggleUI();
+  animationToggleButton.addEventListener("click", () => {
+    animationsEnabled = !animationsEnabled;
+    graphApi.setAnimationsEnabled(animationsEnabled);
+    saveAnimationsEnabled(animationsEnabled);
+    syncAnimationToggleUI();
   });
 
   /** List click (or Enter on a focused row): select AND pan/halo to the node (FACTORY-957 item 4) — the one path that passes `pan: true`. */
@@ -454,6 +475,11 @@ function renderGraph(initialGraph, { onNodeClick, onBackgroundClick } = {}) {
   // mirrored here only so the D3 render loop knows which node to halo. `main()` is the only
   // writer, via the returned `setSelectedId`.
   let selectedNodeId = null;
+  // Agent-status pulse toggle (FACTORY-975/FACTORY-974's ACCESSIBILITY/CONTROLS item) — `main()`
+  // owns the persisted preference and is the only writer, via the returned `setAnimationsEnabled`,
+  // same mirrored-flag pattern as `selectedNodeId` above. Defaults to on; `main()` overrides this
+  // from `loadAnimationsEnabled()` before the first paint if a prior session muted pulses.
+  let animationsEnabled = true;
 
   const svg = d3.select("#graph").attr("width", width).attr("height", height);
   const root = svg.append("g");
@@ -741,8 +767,36 @@ function renderGraph(initialGraph, { onNodeClick, onBackgroundClick } = {}) {
     });
 
     updateSelectionHalo(merged);
+    applyPulseClasses(merged);
 
     return merged;
+  }
+
+  /**
+   * Toggles the agent-status pulse class (FACTORY-975/FACTORY-974) on whichever element
+   * `animationClassFor` targets for this node — `path.node-shape` for "working", both
+   * `path.node-border-ring` and `path.node-border-gap` for "stalled"/"blocked" — and sets the
+   * node's own deterministic `--pulse-delay` stagger. Takes the already-merged selection (entered
+   * AND pre-existing nodes), same pattern as `updateSelectionHalo`, and is called on EVERY render
+   * pass so a node's status change on refresh swaps the class in place with no full re-render;
+   * `setAnimationsEnabled` below calls it again outside a refresh so the pause toggle restyles
+   * immediately. All the actual pulsing is CSS `@keyframes` (style.css) driven by these class
+   * names — this function only ever sets/clears classes and one CSS variable, never a per-frame
+   * loop.
+   */
+  function applyPulseClasses(sel) {
+    sel.each(function (d) {
+      const g = d3.select(this);
+      const activeClass = animationsEnabled ? animationClassFor(d) : null;
+      g.select("path.node-shape").classed(PULSE_BODY_WORKING, activeClass === PULSE_BODY_WORKING);
+      g.select("path.node-border-ring")
+        .classed(PULSE_BORDER_STALLED, activeClass === PULSE_BORDER_STALLED)
+        .classed(PULSE_BORDER_BLOCKED, activeClass === PULSE_BORDER_BLOCKED);
+      g.select("path.node-border-gap")
+        .classed(PULSE_BORDER_STALLED, activeClass === PULSE_BORDER_STALLED)
+        .classed(PULSE_BORDER_BLOCKED, activeClass === PULSE_BORDER_BLOCKED);
+      g.style("--pulse-delay", `${staggerDelayMs(d.id)}ms`);
+    });
   }
 
   /**
@@ -868,10 +922,23 @@ function renderGraph(initialGraph, { onNodeClick, onBackgroundClick } = {}) {
     if (pan && nodeId != null) panToSelectedNode(nodeById.get(nodeId));
   }
 
+  /**
+   * Sets the agent-status pulse toggle (FACTORY-975/FACTORY-974's pause control) — `main()` is
+   * the only caller, on load (from the persisted preference) and on every click of the toggle
+   * button. Restyles every existing node immediately via `applyPulseClasses`, same
+   * "mirror the flag, restyle now, don't wait for the next apply()" pattern `setSelectedId` above
+   * uses for the halo.
+   */
+  function setAnimationsEnabled(enabled) {
+    animationsEnabled = enabled;
+    applyPulseClasses(nodeSel);
+  }
+
   apply(initialGraph);
   return {
     apply,
     setSelectedId,
+    setAnimationsEnabled,
     getNodes: () => nodes,
     getNodeById: (id) => nodeById.get(id),
     epicCountForProject,
