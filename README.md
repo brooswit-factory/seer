@@ -155,15 +155,18 @@ Okabe-Ito-derived set): drawn as the shape's OWN outline stroke (3-4px,
 opaque) rather than a separate ring element, so it composes with every
 shape, not just circular ones — To Do = black, Backlog = grey (a distinct
 shade from the non-Jira/statusless neutral grey below), In Progress = green,
-In Review = yellow, and Done = blue, defined per light/dark theme. Dark
-theme's near-black "To Do" is paired with a thin light hairline
-(`jiraBorderHairlineForNode`, drawn as a second, wider stroke underneath by
-`app.js`) so it still reads against the dark canvas, since a literal black
-cannot itself clear the usual contrast floor there. In Progress-on-Working
-and In Review-on-Idle are deliberately overlapping hues (green-on-green,
-yellow-on-yellow); each pair uses a visibly different shade so it stays
-colour-blind-distinguishable (pinned by `test/jira-status.test.ts`'s
-border-vs-fill adjacency tests). A custom status falls back to its
+In Review = cyan, and Done = dark/navy blue (the latter two recoloured by
+FACTORY-957, a director addendum, from FACTORY-944's original yellow and
+plain blue), defined per light/dark theme. Dark theme's near-black "To Do"
+is paired with a thin light hairline (`jiraBorderHairlineForNode`, drawn as
+a second, wider stroke underneath by `app.js`) so it still reads against
+the dark canvas, since a literal black cannot itself clear the usual
+contrast floor there; Done's dark/navy blue clears that floor outright in
+both themes instead, so it needs no such hairline. In Progress-on-Working
+is a deliberately overlapping hue (green-on-green); it uses a visibly
+different shade so it stays colour-blind-distinguishable (pinned by
+`test/jira-status.test.ts`'s border-vs-fill adjacency tests). A custom
+status falls back to its
 `statusCategory` (new/indeterminate/done), and a non-Jira or statusless node
 gets its own neutral grey. The border is dashed exactly when `colors.js`'s
 `outlineForNode` says the provider cannot report agent status (the same
