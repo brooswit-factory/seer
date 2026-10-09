@@ -1,8 +1,7 @@
-import { statusLabel, STATUS_COLORS, CANNOT_REPORT_COLOR } from "./colors.js";
-import { jiraFillForNode, jiraStatusLabel, JIRA_STATUS_FILLS } from "./jira-status.js";
-import { agentRingForNode } from "./agent-ring.js";
+import { colorForNode, statusLabel, STATUS_COLORS, CANNOT_REPORT_COLOR } from "./colors.js";
+import { jiraStatusLabel, JIRA_STATUS_BORDERS } from "./jira-status.js";
 import { classifyQueryRecord, queryStatusLabel } from "./query-status.js";
-import { shapeForNode, SHAPE_HEXAGON, SHAPE_ROUNDED_SQUARE } from "./shapes.js";
+import { shapeForNode, borderForNode, SHAPE_HEXAGON, SHAPE_ROUNDED_SQUARE } from "./shapes.js";
 import { scaledSizeForNode } from "./node-scale.js";
 import { computeFitTransform, shouldFit } from "./fit-view.js";
 import { isProjectNode, projectFill, SHAPE_PROJECT, PROJECT_LINK_DISTANCE } from "./project.js";
@@ -17,17 +16,16 @@ const COLLIDE_PADDING = 4;
  * marks discovery, not size, and must read identically on a base-size and a live-agent node.
  */
 const DISCOVERY_DOT_RADIUS = 2.5;
-/** Gap (px) between a node's own shape stroke and its agent-status ring (FACTORY-900 item 3). */
-const AGENT_RING_GAP = 3;
 /**
- * Gap (px) between the agent-status ring and the (older, FACTORY-855) admission-withheld ring —
- * widened from the pre-FACTORY-900 `+4` to `+9` specifically so the two rings, now both present
- * on an admission-withheld live-agent node, read as two distinct circles rather than one
- * muddled double border (flagged by the reviewing epic, FACTORY-899 comment 31484 item 3).
+ * Gap (px) between a node's own shape (now carrying the Jira-status border stroke directly,
+ * FACTORY-939) and the (older, FACTORY-855) admission-withheld ring — kept at the FACTORY-900
+ * width rather than reverting to the pre-FACTORY-900 `+4` since the shape's own border is now a
+ * full 3-4px stroke (vs. the old plain 1.5px `--node-stroke`), so the extra clearance still
+ * matters to keep the two read as distinct circles.
  */
 const ADMISSION_RING_GAP = 9;
 
-/** "light" | "dark", read live off the OS/browser preference — the Jira-status fill palette is a theme token pair (FACTORY-900 item 2), not a single hardcoded table. */
+/** "light" | "dark", read live off the OS/browser preference — the Jira-status border palette is a theme token pair (FACTORY-900 item 2, FACTORY-939), not a single hardcoded table. */
 function currentTheme() {
   return typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
@@ -46,7 +44,7 @@ function currentTheme() {
  * same-as-before one. The live path never reads these; only `test/fixtures` or a pre-FACTORY-913
  * snapshot would.
  */
-const FALLBACK_SIZE_CONFIG = { epic: 3, bug: 3, story: 2, base: 1.5 };
+const FALLBACK_SIZE_CONFIG = { epic: 2, bug: 2, story: 1.5, base: 1 };
 const FALLBACK_LAYOUT_CONFIG = { linkDistance: 40, charge: 120, gravity: 0.08 };
 
 function sizeConfigFromGraph(graph) {
@@ -150,7 +148,7 @@ async function main() {
   renderShapeLegend();
   renderProjectLegend();
   renderFillLegend();
-  renderRingLegend();
+  renderBorderLegend();
   renderSizeLegend(graph);
   renderQueries(graph.queries);
   const update = renderGraph(graph);
@@ -210,40 +208,37 @@ function renderProjectLegend() {
   ].join("");
 }
 
-/** Jira status -> fill legend (FACTORY-900 item 4). Shows the CURRENT theme's actual hexes, not a hardcoded single table. */
+/** Agent status -> fill legend (FACTORY-939, reverting FACTORY-900's inversion): colors.js's herdr colours, as a fill swatch again. */
 function renderFillLegend() {
   const el = document.getElementById("fill-legend");
-  const fills = JIRA_STATUS_FILLS[currentTheme()];
-  const rows = ["<h2>Jira status → fill</h2>"];
-  const entries = [
-    ["To Do", fills.todo],
-    ["Backlog", fills.backlog],
-    ["In Progress", fills.inprogress],
-    ["In Review", fills.inreview],
-    ["Done", fills.done],
-    ["non-Jira / no Jira status", fills.neutral],
-  ];
-  for (const [label, hex] of entries) {
-    rows.push(`<div class="legend-row"><span class="swatch" style="background:${hex}"></span><span>${label}</span></div>`);
+  const rows = ["<h2>Agent status → fill</h2>"];
+  for (const [status, hex] of Object.entries(STATUS_COLORS)) {
+    rows.push(`<div class="legend-row"><span class="swatch" style="background:${hex}"></span><span>${status}</span></div>`);
   }
+  rows.push(
+    `<div class="legend-row"><span class="swatch dashed" style="background:${CANNOT_REPORT_COLOR};border-color:${CANNOT_REPORT_COLOR}"></span><span>cannot report status (same neutral as "none" — distinguished by the dashed border, see below)</span></div>`,
+  );
   el.innerHTML = rows.join("");
 }
 
-/** Agent status -> ring legend (FACTORY-900 items 3-4): colours.js's herdr colours, unchanged, now shown as rings rather than fills. */
-function renderRingLegend() {
-  const el = document.getElementById("ring-legend");
-  const rows = ["<h2>Agent status → ring</h2>"];
-  for (const [status, hex] of Object.entries(STATUS_COLORS)) {
-    if (status === "none") continue; // "none" draws NO ring — see the dedicated row below instead of a misleading swatch.
-    rows.push(
-      `<div class="legend-row"><span class="ring-swatch" style="border-color:${hex}"></span><span>${status}</span></div>`,
-    );
+/** Jira status -> border legend (FACTORY-939, repurposed from FACTORY-900's fill legend). Shows the CURRENT theme's actual border hexes. */
+function renderBorderLegend() {
+  const el = document.getElementById("border-legend");
+  const borders = JIRA_STATUS_BORDERS[currentTheme()];
+  const rows = ["<h2>Jira status → border</h2>"];
+  const entries = [
+    ["To Do", borders.todo],
+    ["Backlog", borders.backlog],
+    ["In Progress", borders.inprogress],
+    ["In Review", borders.inreview],
+    ["Done", borders.done],
+    ["non-Jira / no Jira status", borders.neutral],
+  ];
+  for (const [label, hex] of entries) {
+    rows.push(`<div class="legend-row"><span class="border-swatch" style="border-color:${hex}"></span><span>${label}</span></div>`);
   }
   rows.push(
-    `<div class="legend-row"><span class="ring-swatch" style="border:none"></span><span>none (no live agent) — no ring</span></div>`,
-  );
-  rows.push(
-    `<div class="legend-row"><span class="ring-swatch dashed" style="border-color:${CANNOT_REPORT_COLOR}"></span><span>cannot report status — thin dashed neutral ring</span></div>`,
+    `<div class="legend-row"><span class="border-swatch dashed"></span><span>dashed border = the provider cannot report agent status (see fill legend above)</span></div>`,
   );
   rows.push(
     `<div class="legend-row"><span class="swatch" style="background:none;border:2px dashed #fab387"></span><span>admission withheld (a second, wider ring overlay, never a fill)</span></div>`,
@@ -444,52 +439,48 @@ function renderGraph(initialGraph) {
     sel.exit().remove();
 
     const entered = sel.enter().append("g").attr("class", "node").call(dragBehavior());
-    // Shape carries resource type (FACTORY-876 item 3); fill is Jira status, agent status moved
-    // to the ring below (FACTORY-900) — type is never encoded in hue either way.
-    entered
-      .append("path")
-      .attr("class", "node-shape")
-      .attr("stroke", "var(--node-stroke)")
-      .attr("stroke-width", 1.5);
+    // Shape carries resource type (FACTORY-876 item 3); fill is agent status, border is Jira
+    // status (FACTORY-939, reverting FACTORY-900's inversion) — type is never encoded in hue
+    // either way. Stroke attrs are set per-node below (borderForNode), not here.
+    entered.append("path").attr("class", "node-shape");
     entered.append("text").attr("class", "node-label").attr("text-anchor", "middle");
     entered.on("mouseenter", showTooltip).on("mousemove", showTooltip).on("mouseleave", hideTooltip).on("click", showTooltip);
 
     const merged = entered.merge(sel);
 
-    // Re-run on every refresh, not just on enter: a node whose resourceType/jiraStatus (or
-    // anything else shape/fill-relevant) changed needs its path/size/fill/label offset to
-    // follow, in place.
+    // Re-run on every refresh, not just on enter: a node whose resourceType/jiraStatus/agentStatus
+    // (or anything else shape/fill/border-relevant) changed needs its path/size/fill/border/label
+    // offset to follow, in place.
     merged
       .select("path.node-shape")
       .attr("d", (d) => symbolPathForNode(d))
-      .attr("fill", (d) => jiraFillForNode(d, currentTheme()));
+      .attr("fill", (d) => (isProjectNode(d) ? projectFill(currentTheme()) : colorForNode(d)))
+      .each(function (d) {
+        const border = borderForNode(d, currentTheme());
+        const shapeSel = d3.select(this);
+        if (border.visible) {
+          shapeSel
+            .attr("stroke", border.stroke)
+            .attr("stroke-width", border.width)
+            .attr("stroke-dasharray", border.dashed ? "3,2" : null);
+        } else {
+          // No Jira-status border to draw (e.g. a project node) — the shape stays plain, same
+          // neutral outline every node used pre-FACTORY-900.
+          shapeSel.attr("stroke", "var(--node-stroke)").attr("stroke-width", 1.5).attr("stroke-dasharray", null);
+        }
+      });
     merged
       .select("text.node-label")
       .attr("dy", (d) => approxRadiusForNode(d) + 12)
       .text((d) => truncateLabel(d.label));
 
-    // Agent-status ring, admission ring, and the discovery dot are all presence-toggled per
-    // node, not just styled, since whether a node has one can change between refreshes (e.g. it
-    // starts matching a query, or its agent status flips to/from "none"). Radii are re-derived
-    // every pass too, since a node's shape/size can change underneath an existing ring. Insertion
-    // order (always before "text") puts the discovery dot on top of both rings, per FACTORY-900
-    // item 7 ("visible on top of the fill and inside the ring").
+    // The admission ring and the discovery dot are presence-toggled per node, not just styled,
+    // since whether a node has one can change between refreshes. Radii are re-derived every pass
+    // too, since a node's shape/size can change underneath an existing ring. Insertion order
+    // (always before "text") puts the discovery dot on top.
     merged.each(function (d) {
       const g = d3.select(this);
       const radius = approxRadiusForNode(d);
-
-      const ring = agentRingForNode(d);
-      let ringEl = g.select("circle.agent-ring");
-      if (ring.visible) {
-        if (ringEl.empty()) ringEl = g.insert("circle", "text").attr("class", "agent-ring").attr("fill", "none");
-        ringEl
-          .attr("r", radius + AGENT_RING_GAP)
-          .attr("stroke", ring.stroke)
-          .attr("stroke-width", ring.width)
-          .attr("stroke-dasharray", ring.dashed ? "2,2" : null);
-      } else if (!ringEl.empty()) {
-        ringEl.remove();
-      }
 
       const hasAdmissionRing = !g.select("circle.admission-ring").empty();
       if (d.admissionWithheld && !hasAdmissionRing) {

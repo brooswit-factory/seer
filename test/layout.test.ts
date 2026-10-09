@@ -21,7 +21,7 @@ import { PROJECT_LINK_DISTANCE } from "../public/project.js";
 
 const VIEWPORT_WIDTH = 1440;
 const VIEWPORT_HEIGHT = 900;
-const SIZE_CONFIG = { epic: 3, bug: 3, story: 2, base: 1.5 };
+const SIZE_CONFIG = { epic: 2, bug: 2, story: 1.5, base: 1 };
 const LAYOUT_CONFIG = { linkDistance: 40, charge: 120, gravity: 0.08 };
 const COLLIDE_PADDING = 4;
 /** Small tolerance for edge-case floating-point overlap at shape corners, not a real design gap. */

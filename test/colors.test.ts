@@ -34,6 +34,15 @@ describe("colorForNode / outlineForNode", () => {
     expect(outlineForNode(working)).toBe("solid");
   });
 
+  test.each(["working", "idle", "blocked", "stalled", "none"] as const)(
+    "colorForNode returns the agent-status colour for every status, reporting provider (%s) — FACTORY-939 item 2/5",
+    (agentStatus) => {
+      const node = { agentStatus, providerCanReportStatus: true };
+      expect(colorForNode(node)).toBe(STATUS_COLORS[agentStatus]);
+      expect(outlineForNode(node)).toBe("solid");
+    },
+  );
+
   test("cannot-report and reports-none share the same neutral fill", () => {
     expect(colorForNode(cannotReport)).toBe(CANNOT_REPORT_COLOR);
     expect(colorForNode(reportsNone)).toBe(STATUS_COLORS.none);
