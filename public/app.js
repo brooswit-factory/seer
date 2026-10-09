@@ -10,6 +10,7 @@ import { createSelectionState, select as selectNode, deselect as deselectNode, r
 import { createFocusForce } from "./focus-force.js";
 import { createPinTracker, pinForSelection, releaseSelectionPins, promoteToUserPin } from "./focus-pins.js";
 import { isNonFocus, isEdgeDimmed } from "./focus-dim.js";
+import { settleSynchronously } from "./focus-motion.js";
 import { sortNodesForSidebar, filterNodesForSidebar } from "./sidebar-list.js";
 import { splitNodeLabel, maxCharsForRadius, truncateToChars, line1Dy, labelBottomExtent, LINE2_FONT_SCALE, LINE_SPACING_PX } from "./node-label.js";
 import { animationClassFor, staggerDelayMs, PULSE_BODY_WORKING, PULSE_BORDER_STALLED, PULSE_BORDER_BLOCKED } from "./agent-animation.js";
@@ -60,8 +61,6 @@ function prefersReducedMotion() {
  */
 const FOCUS_ALPHA_TARGET = 0.3;
 const FOCUS_ALPHA_SETTLE_MS = 400;
-/** Hard cap on manual `simulation.tick()` calls for the `prefers-reduced-motion` synchronous path (item 4) — same bound `test/layout.test.ts` uses to run a fresh simulation to rest; prevents a pathological graph from looping forever if alpha somehow never reaches `alphaMin`. */
-const FOCUS_MAX_SYNC_TICKS = 1000;
 
 /**
  * Fallbacks for the FACTORY-890/913 size/layout constants, used ONLY when `/graph.json` predates
@@ -506,6 +505,13 @@ function renderGraph(initialGraph, { onNodeClick, onBackgroundClick } = {}) {
   let basePositions = new Map();
   let pinTracker = createPinTracker();
   let focusAlphaTimer = null;
+  // FACTORY-982 item 5: a focus-driven reheat (`reheatFocusSimulation`'s eased branch) keeps
+  // `alphaTarget` warm then lets it decay to 0, which — like any other reheat in this file — ends
+  // by firing the simulation's "end" event. That event's handler normally calls `fit()`, but a
+  // selection must NEVER trigger a re-fit (the ticket's own item 5), so this flag tells the "end"
+  // handler below to skip exactly ONE such fit — set here, cleared there, and also cleared by the
+  // drag-start handler below so a genuine drag-driven settle still gets its normal fit-on-end.
+  let suppressNextFitOnEnd = false;
   // Agent-status pulse toggle (FACTORY-975/FACTORY-974's ACCESSIBILITY/CONTROLS item) — `main()`
   // owns the persisted preference and is the only writer, via the returned `setAnimationsEnabled`,
   // same mirrored-flag pattern as `selectedNodeId` above. Defaults to on; `main()` overrides this
@@ -651,13 +657,24 @@ function renderGraph(initialGraph, { onNodeClick, onBackgroundClick } = {}) {
       }),
     );
 
-  simulation.on("end", () => fit());
+  simulation.on("end", () => {
+    // FACTORY-982 item 5: skip exactly the one fit-on-end that a focus-driven reheat's own decay
+    // would otherwise trigger — see `suppressNextFitOnEnd`'s own comment above.
+    if (suppressNextFitOnEnd) {
+      suppressNextFitOnEnd = false;
+      return;
+    }
+    fit();
+  });
 
   function dragBehavior() {
     return d3
       .drag()
       .on("start", (event, d) => {
         if (!event.active) simulation.alphaTarget(0.3).restart();
+        // A real drag is its own, independent reason to want the normal fit-on-end behaviour —
+        // never suppressed by an unrelated focus reheat that merely happened to still be settling.
+        suppressNextFitOnEnd = false;
         // FACTORY-982 item 2: dragging a node the CURRENT selection pinned promotes it to a
         // user pin — deselect must no longer release it. A drag on any other node is unaffected
         // (not in `pinTracker.selectionPinned`, so this is a no-op bookkeeping-wise), preserving
@@ -1054,26 +1071,23 @@ function renderGraph(initialGraph, { onNodeClick, onBackgroundClick } = {}) {
    * a modest `alphaTarget`, same shape `dragBehavior`'s start/end already use, reset to 0 after
    * `FOCUS_ALPHA_SETTLE_MS` since a selection (unlike a drag) has no natural "end" event to reset
    * it from. Under `prefers-reduced-motion: reduce`, skips the easing entirely and instead ticks
-   * the simulation synchronously to rest (same convention `test/layout.test.ts` uses to settle a
-   * fresh simulation headlessly) before repainting once, so the new layout applies as an instant
-   * jump with no animation frames.
+   * the simulation synchronously to rest via `focus-motion.js`'s `settleSynchronously` (unit-tested
+   * there against a real `d3-force` simulation) before repainting once, so the new layout applies
+   * as an instant jump with no animation frames. Either path marks the NEXT "end" event as one to
+   * skip `fit()` for (item 5) — the eased path's alphaTarget-decay-to-0 would otherwise end the
+   * simulation and re-fit the view on a plain select; `settleSynchronously` itself calls
+   * `simulation.stop()`, so it never actually fires "end", but the flag is set unconditionally
+   * here (not inside the `if`) so neither path depends on that d3-internal detail to stay correct.
    */
   function reheatFocusSimulation() {
+    clearTimeout(focusAlphaTimer);
+    suppressNextFitOnEnd = true;
     if (prefersReducedMotion()) {
-      clearTimeout(focusAlphaTimer);
-      simulation.alphaTarget(0);
-      simulation.stop();
-      simulation.alpha(1);
-      let iterations = 0;
-      while (simulation.alpha() > simulation.alphaMin() && iterations < FOCUS_MAX_SYNC_TICKS) {
-        simulation.tick();
-        iterations++;
-      }
+      settleSynchronously(simulation);
       renderPositions();
       return;
     }
     simulation.alphaTarget(FOCUS_ALPHA_TARGET).restart();
-    clearTimeout(focusAlphaTimer);
     focusAlphaTimer = setTimeout(() => simulation.alphaTarget(0), FOCUS_ALPHA_SETTLE_MS);
   }
 
