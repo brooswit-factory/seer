@@ -39,7 +39,7 @@ class StubProvider implements Provider {
 }
 
 function configWith(sources: SeerConfig["sources"], linkDepth = 1): SeerConfig {
-  return { sources, linkDepth, port: 4173, resultCap: 50, refreshSeconds: 30 };
+  return { sources, linkDepth, port: 4173, resultCap: 50, refreshSeconds: 30, collectTimeoutSeconds: 60 };
 }
 
 describe("collect", () => {

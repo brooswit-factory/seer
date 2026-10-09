@@ -23,6 +23,12 @@ export interface ServeOptions {
   port: number;
   /** Serves `/graph.json`: runs (or reuses a cached) live collection, falling back to a stale snapshot or the committed fixture. */
   graphCache: GraphCache;
+  /**
+   * `Bun.serve`'s `idleTimeout`, in seconds. Must exceed the worst-case collect time — a cold
+   * `/graph.json` runs the full collect inline, and Bun's default `idleTimeout` (10s) is shorter
+   * than that can take, so the browser's first load would otherwise time out mid-collection.
+   */
+  idleTimeoutSeconds: number;
   openInBrowser?: boolean;
 }
 
@@ -31,11 +37,17 @@ export interface ServeOptions {
  * never read from config, env, or an argument — there is no flag that can make this public.
  */
 export function startServer(options: ServeOptions): ReturnType<typeof Bun.serve> {
-  const { port, graphCache } = options;
+  const { port, graphCache, idleTimeoutSeconds } = options;
+
+  // Kick off the collect now rather than waiting for the first request: GraphCache's
+  // single-flight means a request arriving while this is in flight shares this same run
+  // instead of starting a second one.
+  void graphCache.getGraph();
 
   const server = Bun.serve({
     hostname: "127.0.0.1",
     port,
+    idleTimeout: idleTimeoutSeconds,
     async fetch(req) {
       const url = new URL(req.url);
       if (url.pathname === "/graph.json") {

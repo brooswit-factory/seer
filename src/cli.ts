@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { readFileSync } from "node:fs";
 import { loadConfig } from "./config/loader.ts";
+import { resolveConfigPath, stripConfigFlag, type ResolvedConfigPath } from "./config/resolve-path.ts";
 import type { SeerConfig } from "./config/schema.ts";
 import { loadSizeConfig, loadLayoutConfig } from "./config/env.ts";
 import { parseGraph } from "./graph/validate.ts";
@@ -20,8 +21,10 @@ function usage(): never {
   console.error(
     [
       "Usage:",
-      "  bun run seer                 Serve the viewer on localhost and open the browser; /graph.json is collected live from Jira, cached, and falls back to the committed fixture if nothing has ever succeeded.",
-      "  bun run seer collect [config] Run every source's queries once and write graph.json (default config: fixtures/seer.config.example.json) — a one-off snapshot, independent of `seer serve`'s own live cache.",
+      "  bun run seer [--config <path>]                 Serve the viewer on localhost and open the browser; /graph.json is collected live from Jira, cached, and falls back to the committed fixture if nothing has ever succeeded.",
+      "  bun run seer collect [config] [--config <path>] Run every source's queries once and write graph.json — a one-off snapshot, independent of `seer serve`'s own live cache.",
+      "",
+      "Config path precedence: --config <path> > SEER_CONFIG env var > (collect's own positional [config] arg) > the committed fixtures/seer.config.example.json default.",
     ].join("\n"),
   );
   process.exit(1);
@@ -35,8 +38,14 @@ function readJiraEnv() {
   };
 }
 
-async function runCollect(configPath: string) {
-  const config = loadConfig(configPath);
+async function runCollect(argv: string[], positional: string | undefined) {
+  const resolved = resolveConfigPath({
+    args: argv,
+    env: process.env,
+    ...(positional !== undefined ? { positional } : {}),
+    defaultPath: DEFAULT_CONFIG_PATH,
+  });
+  const config = loadConfig(resolved.path); // throws a clear ConfigError if unreadable — always, flag/env/positional alike
   const { baseUrl, email, apiToken } = readJiraEnv();
   if (!baseUrl || !email || !apiToken) {
     console.error("collect requires JIRA_BASE_URL, JIRA_EMAIL and JIRA_API_TOKEN in the environment.");
@@ -74,8 +83,9 @@ function buildCollectFn(config: SeerConfig | null): () => Promise<Graph> {
   };
 }
 
-async function runServe() {
-  const config = tryLoadConfig();
+async function runServe(argv: string[]) {
+  const resolved = resolveConfigPath({ args: argv, env: process.env, defaultPath: DEFAULT_CONFIG_PATH });
+  const config = tryLoadConfig(resolved);
   const { baseUrl, email, apiToken } = readJiraEnv();
   const sanitizeError = createSanitizeError([baseUrl, email, apiToken].filter((v): v is string => Boolean(v)));
 
@@ -88,25 +98,36 @@ async function runServe() {
     layoutConfig: loadLayoutConfig(),
   });
 
-  startServer({ port: config?.port ?? 4173, graphCache });
+  const collectTimeoutSeconds = config?.collectTimeoutSeconds ?? 60;
+  startServer({ port: config?.port ?? 4173, graphCache, idleTimeoutSeconds: collectTimeoutSeconds + 5 });
 }
 
-function tryLoadConfig(): SeerConfig | null {
+/**
+ * On the default (unspecified) config path, an unreadable/invalid file falls back to
+ * fixture-only mode, same as before this change. But when the path was explicitly named
+ * (`--config`, `SEER_CONFIG`), never silently fall back — let the `ConfigError` propagate
+ * so `main()`'s catch reports it and exits non-zero.
+ */
+function tryLoadConfig(resolved: ResolvedConfigPath): SeerConfig | null {
+  if (resolved.explicit) {
+    return loadConfig(resolved.path);
+  }
   try {
-    return loadConfig(DEFAULT_CONFIG_PATH);
+    return loadConfig(resolved.path);
   } catch {
     return null;
   }
 }
 
 async function main() {
-  const [subcommand, ...rest] = process.argv.slice(2);
+  const argv = process.argv.slice(2);
+  const [subcommand, ...rest] = stripConfigFlag(argv);
   if (subcommand === undefined) {
-    await runServe();
+    await runServe(argv);
   } else if (subcommand === "collect") {
-    await runCollect(rest[0] ?? DEFAULT_CONFIG_PATH);
+    await runCollect(argv, rest[0]);
   } else if (subcommand === "serve") {
-    await runServe();
+    await runServe(argv);
   } else {
     usage();
   }

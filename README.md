@@ -34,9 +34,9 @@ JIRA_BASE_URL=https://yoursite.atlassian.net JIRA_EMAIL=you@example.com JIRA_API
 
 `bun run seer` now serves `/graph.json` LIVE: each request (subject to the
 cache below) runs the Jira collector configured by
-`fixtures/seer.config.example.json` (or `SEER_CONFIG`-adjacent conventions —
-see `src/cli.ts`). Without `JIRA_BASE_URL`/`JIRA_EMAIL`/`JIRA_API_TOKEN` set,
-or before any collection has ever succeeded, the viewer falls back to the
+`fixtures/seer.config.example.json`, unless told otherwise (see "Config
+path" below). Without `JIRA_BASE_URL`/`JIRA_EMAIL`/`JIRA_API_TOKEN` set, or
+before any collection has ever succeeded, the viewer falls back to the
 committed fixture and says so (`usingFixture: true` in the graph JSON, a
 banner in the UI) — the one command always shows something.
 
@@ -47,6 +47,28 @@ cache):
 JIRA_BASE_URL=https://yoursite.atlassian.net JIRA_EMAIL=you@example.com JIRA_API_TOKEN=... \
   bun run seer collect fixtures/seer.config.example.json
 ```
+
+### Config path
+
+Both `bun run seer` (serve) and `bun run seer collect` load their
+`SeerConfig` JSON from one path, picked in this order:
+
+1. `--config <path>` flag (also accepts `--config=<path>`) — highest priority.
+2. `SEER_CONFIG` environment variable.
+3. `seer collect`'s own positional `[config]` argument (serve has no
+   positional form).
+4. The committed `fixtures/seer.config.example.json` default.
+
+```
+SEER_CONFIG=/etc/seer/config.json bun run seer
+bun run seer --config /etc/seer/config.json
+bun run seer collect --config /etc/seer/config.json
+```
+
+If a path was named explicitly (tiers 1-3) and it can't be read or parsed,
+seer fails loudly with a `ConfigError` naming the path — it never silently
+falls back to the example config once you've told it where to look. Only
+the untouched default (tier 4) falls back to fixture-only mode on failure.
 
 ## Live serving, caching, and staleness (FACTORY-875)
 
