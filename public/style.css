@@ -24,6 +24,10 @@
   --edge: #4c4f69;
   --arrowhead: #4c4f69;
   --node-stroke: #4c4f69;
+  /* FACTORY-970 line-2 node-label colour: darker than --muted (#6c6f85, which is only 4.37:1
+     against this theme's --bg — just under the 4.5:1 floor), so this is its own token rather
+     than a reuse. #5c5f77 vs #eff1f5 = 5.53:1 (test/contrast.test.ts verifies this). */
+  --node-label-muted: #5c5f77;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -38,6 +42,10 @@
     --edge: #cdd6f4;
     --arrowhead: #cdd6f4;
     --node-stroke: #cdd6f4;
+    /* --muted (#a6adc8) already clears 4.5:1 here (7.37:1), so dark reuses that same hex rather
+       than inventing a second colour, but still as its own token name — see the light block's
+       comment for why this token exists distinctly from --muted. */
+    --node-label-muted: #a6adc8;
   }
 }
 
@@ -395,6 +403,13 @@ header .timestamp.stale {
   font-size: 10px;
   fill: var(--fg);
   pointer-events: none;
+}
+
+/* FACTORY-970: line 2 (the name, key prefix stripped) reads smaller and muted beneath line 1
+   (the key, which inherits .node-label's 10px/--fg above — no override needed). */
+.node-label-name {
+  font-size: 8px;
+  fill: var(--node-label-muted);
 }
 
 .admission-ring {
