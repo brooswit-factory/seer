@@ -104,6 +104,18 @@ describe("validateGraph", () => {
     expect(zero?.error).not.toBe(failed?.error);
   });
 
+  test("accepts a node with resourceType absent — backward compatible with old graph.json (FACTORY-876)", () => {
+    expect(validateGraph(base).valid).toBe(true);
+    expect(base.nodes[0]).not.toHaveProperty("resourceType");
+  });
+
+  test("accepts a node with resourceType present", () => {
+    const withType = { ...base, nodes: [{ ...base.nodes[0], resourceType: "Epic" }] };
+    const result = validateGraph(withType);
+    expect(result.valid).toBe(true);
+    expect(result.data?.nodes[0]?.resourceType).toBe("Epic");
+  });
+
   test("parseGraph returns the validated object (with defaults applied), not a cast of the input", () => {
     const withoutTruncated = {
       ...base,

@@ -42,10 +42,42 @@ bun run seer
 
 `public/` is a plain static page (D3 loaded from a CDN `<script>` tag, no
 bundler): `index.html`, `app.js` (the force-directed graph, tooltip,
-legend, query panel), `colors.js` (the ONE herdr-verified status→colour
-table, also imported directly by `test/colors.test.ts`), and
+legends, query panel), `colors.js` (the ONE herdr-verified status→colour
+table, also imported directly by `test/colors.test.ts`), `shapes.js` (the
+type→shape mapping, see below — also imported directly by
+`test/shapes.test.ts`), `contrast.js` (a small WCAG contrast-ratio
+calculator, imported directly by `test/contrast.test.ts`), and
 `query-status.js` (classifies a query record as ok / zero-match / failed /
 truncated — also imported directly by its test).
+
+**Node shape = resource type, fill = agent status (FACTORY-876).** Each node
+is drawn as a D3 symbol whose *shape* is a pure function of its
+`resourceType` (and, for the Jira/non-Jira split, its `provider`) —
+never its hue, so the graph stays colour-blind-safe. The mapping
+(`public/shapes.js`):
+
+| Resource type         | Shape           | Size tier         |
+|------------------------|-----------------|-------------------|
+| Epic                   | hexagon         | largest           |
+| Story                  | square          |                   |
+| Task                   | circle          |                   |
+| Bug                    | triangle        |                   |
+| Sub-task               | diamond         | smallest          |
+| other/unknown Jira type| rounded square  | mid               |
+| any non-Jira provider  | star            | mid               |
+
+Fill colour is still the agent-status table in `colors.js`, completely
+unchanged. A sidebar legend shows both mappings (type → shape, status →
+colour), correct in light and dark themes — a different thing from the
+per-source grouping legend FACTORY-874 removed.
+
+Shape strokes use the `--shape-stroke` CSS custom property
+(`public/style.css`), chosen to meet WCAG contrast ≥ 4.5:1 against `--bg` in
+both the default (dark) theme and the `prefers-color-scheme: light` theme —
+verified in `test/contrast.test.ts` via `public/contrast.js`. These token
+names and values are meant to match FACTORY-873's own edge/arrowhead/stroke
+theme tokens; if that story merges first, expect (and resolve) a trivial
+rebase conflict here rather than two divergent token sets.
 
 **Shared-node attribution decision** (FACTORY-855 item 3): when the same
 resource is reached by more than one source, a direct query hit always wins
@@ -111,9 +143,12 @@ code imports types rather than redeclaring them.
   `agent:*` statuses (`working | idle | blocked | stalled | none`), whether
   the provider is even capable of reporting status
   (`providerCanReportStatus` — distinguishes "cannot report" from "reports
-  none"), whether an admission-withheld marker is present, and `discovery`
+  none"), whether an admission-withheld marker is present, `discovery`
   (`"query" | "link"` — whether a source's query matched this node directly
-  or it was only reached by link expansion). Per edge: source id, target id,
+  or it was only reached by link expansion), and an OPTIONAL `resourceType`
+  (the Jira issue type name, or a non-Jira provider's own value — absent on
+  old data, which still validates; see "The viewer" above for how the
+  viewer renders it as a shape). Per edge: source id, target id,
   and a small closed `kind` enum (`implements | blocks | relates | parent |
   link`); edges must reference existing node ids. Top-level: a schema
   version, an ISO-8601 snapshot timestamp, the nodes and edges, and a

@@ -87,6 +87,41 @@ describe("JiraProvider.runQuery", () => {
     expect(links).toContainEqual({ targetId: "jira-work:X-0", kind: "parent" });
   });
 
+  test("requests issuetype in the fields list (FACTORY-876)", async () => {
+    let calledUrl = "";
+    const fetchImpl = (async (url: string | URL) => {
+      calledUrl = String(url);
+      return new Response(JSON.stringify({ issues: [issue("X-1")], isLast: true }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const provider = new JiraProvider({ baseUrl: "https://example.atlassian.net", email: "a@b.com", apiToken: "tok", fetchImpl });
+
+    await provider.runQuery("project = X", 10);
+
+    expect(decodeURIComponent(calledUrl)).toContain("fields=summary,labels,issuelinks,parent,issuetype");
+  });
+
+  test("maps the Jira issuetype name onto resourceType", async () => {
+    const fetchImpl = (async () =>
+      new Response(
+        JSON.stringify({
+          issues: [
+            issue("X-1", { issuetype: { name: "Epic" } }),
+            issue("X-2", { issuetype: { name: "Sub-task" } }),
+            issue("X-3", {}),
+          ],
+          isLast: true,
+        }),
+        { status: 200 },
+      )) as unknown as typeof fetch;
+    const provider = new JiraProvider({ baseUrl: "https://example.atlassian.net", email: "a@b.com", apiToken: "tok", fetchImpl });
+
+    const { matches } = await provider.runQuery("q", 10);
+
+    expect(matches.find((m) => m.id === "jira-work:X-1")?.resourceType).toBe("Epic");
+    expect(matches.find((m) => m.id === "jira-work:X-2")?.resourceType).toBe("Sub-task");
+    expect(matches.find((m) => m.id === "jira-work:X-3")?.resourceType).toBeUndefined();
+  });
+
   test("truncation: requesting cap+1 and getting more than cap back marks truncated, matched is capped", async () => {
     const fetchImpl = (async (url: string | URL) => {
       // the endpoint reports no total — the provider must request cap+1 itself to detect this
@@ -132,6 +167,7 @@ describe("JiraProvider.fetchById", () => {
     const match = await provider.fetchById("jira-work:X-9");
 
     expect(calledUrl).toContain("/rest/api/3/issue/X-9");
+    expect(calledUrl).toContain("issuetype");
     expect(match?.id).toBe("jira-work:X-9");
   });
 
