@@ -12,6 +12,8 @@
 // Each theme's set is tuned so every fill is >= 3:1 against that theme's `--bg` (verified in
 // test/jira-status.test.ts using the same WCAG math as contrast.js) and so every pairwise
 // distance survives a protanopia/deuteranopia/tritanopia simulation (public/colorblind.js).
+import { isProjectNode, projectFill } from "./project.js";
+
 export const JIRA_FILL_TODO = "todo";
 export const JIRA_FILL_BACKLOG = "backlog";
 export const JIRA_FILL_IN_PROGRESS = "inprogress";
@@ -63,8 +65,9 @@ export function jiraFillKeyForNode(node) {
   return CATEGORY_TO_FILL[status.category] ?? JIRA_FILL_NEUTRAL;
 }
 
-/** Actual fill hex for a node in the given theme ("light" | "dark"). */
+/** Actual fill hex for a node in the given theme ("light" | "dark") — a project node (FACTORY-911) always gets its own fixed token instead, never a Jira-status colour. */
 export function jiraFillForNode(node, theme) {
+  if (isProjectNode(node)) return projectFill(theme);
   const table = JIRA_STATUS_FILLS[theme] ?? JIRA_STATUS_FILLS.light;
   return table[jiraFillKeyForNode(node)];
 }

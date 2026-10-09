@@ -19,6 +19,8 @@
 // the provider key "jira-work" (see `JiraProviderOptions.providerKey`'s default); matching by
 // prefix tolerates a renamed key without hard-coding the exact string twice.
 
+import { isProjectNode, SHAPE_PROJECT, PROJECT_SIZE } from "./project.js";
+
 export const SHAPE_HEXAGON = "hexagon";
 export const SHAPE_SQUARE = "square";
 export const SHAPE_CIRCLE = "circle";
@@ -51,14 +53,23 @@ function isJiraProvider(provider) {
   return typeof provider === "string" && provider.toLowerCase().startsWith("jira");
 }
 
-/** Shape name for a node `{ provider, resourceType }`. Never throws on a missing/unknown field — falls through to "other/unknown". */
+/**
+ * Shape name for a node `{ provider, resourceType }`. Never throws on a missing/unknown field —
+ * falls through to "other/unknown". A synthesised project node (FACTORY-911) is checked FIRST,
+ * before the Jira-provider fallthrough below: its own provider key, "jira-project", would
+ * otherwise match `isJiraProvider`'s `startsWith("jira")` and fall into the Jira resourceType
+ * table (resourceType "project" is unmapped there, which would wrongly land it on
+ * SHAPE_ROUNDED_SQUARE — a ticket-shape it must never share).
+ */
 export function shapeForNode(node) {
+  if (isProjectNode(node)) return SHAPE_PROJECT;
   if (!isJiraProvider(node?.provider)) return SHAPE_STAR;
   const mapped = node?.resourceType ? JIRA_RESOURCE_TYPE_SHAPES[node.resourceType] : undefined;
   return mapped ?? SHAPE_ROUNDED_SQUARE;
 }
 
-/** Size for a node, derived from its shape. */
+/** Size for a node, derived from its shape — except a project node, which is a FIXED area (PROJECT_SIZE), never one of the per-type tiers. */
 export function sizeForNode(node) {
+  if (isProjectNode(node)) return PROJECT_SIZE;
   return SHAPE_SIZES[shapeForNode(node)];
 }

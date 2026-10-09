@@ -133,6 +133,38 @@ export async function collect(config: SeerConfig, providers: Record<string, Prov
     ...(match.jiraStatus !== undefined ? { jiraStatus: match.jiraStatus } : {}),
   }));
 
+  // Project nodes (FACTORY-911): synthesised from any match's `project` field, never fetched as
+  // their own query hit — one node per distinct project key that has at least one ticket node in
+  // the graph, a `contains` edge to every Epic of that project already present (query- or
+  // link-discovered alike), and nothing else. `ownerSourceId` is the owning source of whichever
+  // of that project's tickets was attributed first, so a project still groups sensibly under the
+  // compact-layout hull even though it was never itself matched by a query.
+  const projectsByKey = new Map<string, { name: string; url: string; ownerSourceId: string }>();
+  for (const { match, ownerSourceId } of byId.values()) {
+    if (!match.project || projectsByKey.has(match.project.key)) continue;
+    projectsByKey.set(match.project.key, { name: match.project.name, url: match.project.url, ownerSourceId });
+  }
+
+  for (const [key, project] of projectsByKey) {
+    nodes.push({
+      id: `jira-project:${key}`,
+      provider: "jira-project",
+      label: `${key} ${project.name}`,
+      url: project.url,
+      ownerSourceId: project.ownerSourceId,
+      agentStatus: "none",
+      providerCanReportStatus: false,
+      admissionWithheld: false,
+      discovery: "query",
+      resourceType: "project",
+    });
+  }
+
+  for (const { match } of byId.values()) {
+    if (match.resourceType !== "Epic" || !match.project) continue;
+    addEdge(`jira-project:${match.project.key}`, match.id, "contains");
+  }
+
   return {
     schemaVersion: SCHEMA_VERSION,
     snapshotTimestamp: new Date().toISOString(),

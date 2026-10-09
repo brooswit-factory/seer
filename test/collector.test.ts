@@ -209,6 +209,123 @@ describe("collect", () => {
     expect(graph.nodes.find((n) => n.id === "stub:withoutStatus")?.jiraStatus).toBeUndefined();
   });
 
+  describe("project node synthesis (FACTORY-911)", () => {
+    test("one project node per distinct project.key; contains edge to an Epic found by a query", async () => {
+      const config = configWith([
+        { id: "a@m1", machine: "m1", user: "a", displayName: "A", queries: [{ provider: "stub", query: "qa" }] },
+      ]);
+      const provider = new StubProvider({
+        qa: {
+          matches: [
+            match("EPIC-1", { resourceType: "Epic", project: { key: "FACTORY", name: "factory", url: "https://example.com/browse/FACTORY" } }),
+          ],
+        },
+      });
+
+      const graph = await collect(config, { stub: provider }, { resultCap: 50 });
+
+      const projectNodes = graph.nodes.filter((n) => n.provider === "jira-project");
+      expect(projectNodes).toHaveLength(1);
+      expect(projectNodes[0]).toMatchObject({
+        id: "jira-project:FACTORY",
+        provider: "jira-project",
+        resourceType: "project",
+        label: "FACTORY factory",
+        url: "https://example.com/browse/FACTORY",
+        agentStatus: "none",
+        providerCanReportStatus: false,
+        admissionWithheld: false,
+      });
+      expect(projectNodes[0]).not.toHaveProperty("jiraStatus");
+      expect(graph.edges).toContainEqual({ source: "jira-project:FACTORY", target: "stub:EPIC-1", kind: "contains" });
+    });
+
+    test("a contains edge also reaches an Epic only present via link-discovery", async () => {
+      const config = configWith([
+        { id: "a@m1", machine: "m1", user: "a", displayName: "A", queries: [{ provider: "stub", query: "qa" }] },
+      ]);
+      const project = { key: "FACTORY", name: "factory", url: "https://example.com/browse/FACTORY" };
+      const provider = new StubProvider(
+        {
+          qa: {
+            matches: [
+              match("TASK-1", { resourceType: "Task", project, links: [{ targetId: "stub:EPIC-2", kind: "parent" }] }),
+            ],
+          },
+        },
+        { "stub:EPIC-2": match("EPIC-2", { resourceType: "Epic", project }) },
+      );
+
+      const graph = await collect(config, { stub: provider }, { resultCap: 50 });
+
+      const epic = graph.nodes.find((n) => n.id === "stub:EPIC-2");
+      expect(epic?.discovery).toBe("link");
+      expect(graph.edges).toContainEqual({ source: "jira-project:FACTORY", target: "stub:EPIC-2", kind: "contains" });
+    });
+
+    test("a project with no Epic in the graph still gets a node, but no contains edge", async () => {
+      const config = configWith([
+        { id: "a@m1", machine: "m1", user: "a", displayName: "A", queries: [{ provider: "stub", query: "qa" }] },
+      ]);
+      const provider = new StubProvider({
+        qa: {
+          matches: [match("TASK-1", { resourceType: "Task", project: { key: "FACTORY", name: "factory", url: "https://example.com/browse/FACTORY" } })],
+        },
+      });
+
+      const graph = await collect(config, { stub: provider }, { resultCap: 50 });
+
+      expect(graph.nodes.some((n) => n.id === "jira-project:FACTORY")).toBe(true);
+      expect(graph.edges.some((e) => e.kind === "contains")).toBe(false);
+    });
+
+    test("a non-Epic ticket never gets a contains edge, even though it carries a project", async () => {
+      const config = configWith([
+        { id: "a@m1", machine: "m1", user: "a", displayName: "A", queries: [{ provider: "stub", query: "qa" }] },
+      ]);
+      const project = { key: "FACTORY", name: "factory", url: "https://example.com/browse/FACTORY" };
+      const provider = new StubProvider({
+        qa: { matches: [match("STORY-1", { resourceType: "Story", project })] },
+      });
+
+      const graph = await collect(config, { stub: provider }, { resultCap: 50 });
+
+      expect(graph.edges.some((e) => e.target === "stub:STORY-1")).toBe(false);
+    });
+
+    test("no project field on any match means no project node at all", async () => {
+      const config = configWith([
+        { id: "a@m1", machine: "m1", user: "a", displayName: "A", queries: [{ provider: "stub", query: "qa" }] },
+      ]);
+      const provider = new StubProvider({ qa: { matches: [match("n1")] } });
+
+      const graph = await collect(config, { stub: provider }, { resultCap: 50 });
+
+      expect(graph.nodes.some((n) => n.provider === "jira-project")).toBe(false);
+    });
+
+    test("two tickets in the same project dedupe to exactly one project node, with a contains edge to each Epic", async () => {
+      const config = configWith([
+        { id: "a@m1", machine: "m1", user: "a", displayName: "A", queries: [{ provider: "stub", query: "qa" }] },
+      ]);
+      const project = { key: "FACTORY", name: "factory", url: "https://example.com/browse/FACTORY" };
+      const provider = new StubProvider({
+        qa: {
+          matches: [
+            match("EPIC-1", { resourceType: "Epic", project }),
+            match("EPIC-2", { resourceType: "Epic", project }),
+          ],
+        },
+      });
+
+      const graph = await collect(config, { stub: provider }, { resultCap: 50 });
+
+      expect(graph.nodes.filter((n) => n.provider === "jira-project")).toHaveLength(1);
+      expect(graph.edges).toContainEqual({ source: "jira-project:FACTORY", target: "stub:EPIC-1", kind: "contains" });
+      expect(graph.edges).toContainEqual({ source: "jira-project:FACTORY", target: "stub:EPIC-2", kind: "contains" });
+    });
+  });
+
   test("an unregistered provider is a recorded error, not a crash", async () => {
     const config = configWith([
       { id: "a@m1", machine: "m1", user: "a", displayName: "A", queries: [{ provider: "nonexistent", query: "q" }] },

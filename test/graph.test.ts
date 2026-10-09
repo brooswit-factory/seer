@@ -149,6 +149,38 @@ describe("validateGraph", () => {
     expect(validateGraph(bad).valid).toBe(false);
   });
 
+  test("accepts a 'contains' edge kind (FACTORY-911) alongside a synthesised project node, still back-compat-additive", () => {
+    const projectNode = {
+      id: "jira-project:FACTORY",
+      provider: "jira-project",
+      label: "FACTORY factory",
+      url: "https://example.com/browse/FACTORY",
+      ownerSourceId: "u1@machine1",
+      agentStatus: "none",
+      providerCanReportStatus: false,
+      admissionWithheld: false,
+      discovery: "query",
+      resourceType: "project",
+    };
+    const withProject = {
+      ...base,
+      nodes: [...base.nodes, projectNode],
+      edges: [{ source: "jira-project:FACTORY", target: "jira-work:X-1", kind: "contains" }],
+    };
+    const result = validateGraph(withProject);
+    expect(result.valid).toBe(true);
+    expect(result.data?.edges[0]?.kind).toBe("contains");
+  });
+
+  test("rejects an edge kind that isn't in the closed EdgeKind set", () => {
+    const bad = { ...base, edges: [{ source: "jira-work:X-1", target: "jira-work:X-1", kind: "owns" }] };
+    expect(validateGraph(bad).valid).toBe(false);
+  });
+
+  test("an old graph.json with no project nodes/contains edges still validates unchanged (additive-only)", () => {
+    expect(validateGraph(base).valid).toBe(true);
+  });
+
   test("parseGraph returns the validated object (with defaults applied), not a cast of the input", () => {
     const withoutTruncated = {
       ...base,

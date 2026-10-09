@@ -13,6 +13,7 @@ import {
 } from "../public/jira-status.js";
 import { contrastRatio, THEME_TOKENS } from "../public/contrast.js";
 import { COLORBLIND_TYPES, rgbDistance, simulateColorblind } from "../public/colorblind.js";
+import { PROJECT_FILL } from "../public/project.js";
 
 const MIN_FILL_CONTRAST = 3; // the ticket's own threshold (item 2) — looser than the 4.5:1 text/stroke rule, appropriate for a filled shape.
 const MIN_COLORBLIND_DISTANCE = 30; // a conservative floor under the worst-case simulated pair across both themes (see FACTORY-900 palette-selection notes).
@@ -57,6 +58,13 @@ describe("jiraFillForNode / jiraStatusLabel", () => {
   test("statusLabel reports the real Jira status name, or an explicit absence", () => {
     expect(jiraStatusLabel({ jiraStatus: { name: "In Review", category: "indeterminate" } })).toBe("In Review");
     expect(jiraStatusLabel({})).toBe("no Jira status");
+  });
+
+  test("a project node (FACTORY-911) always gets its own fixed PROJECT_FILL, never a Jira-status colour — even if jiraStatus were somehow present", () => {
+    const projectNode = { provider: "jira-project", resourceType: "project", jiraStatus: { name: "Done", category: "done" } };
+    expect(jiraFillForNode(projectNode, "light")).toBe(PROJECT_FILL.light);
+    expect(jiraFillForNode(projectNode, "dark")).toBe(PROJECT_FILL.dark);
+    expect(jiraFillForNode(projectNode, "light")).not.toBe(JIRA_STATUS_FILLS.light[JIRA_FILL_DONE]);
   });
 });
 

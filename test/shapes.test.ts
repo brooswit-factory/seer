@@ -6,6 +6,7 @@ import {
   shapeForNode,
   sizeForNode,
 } from "../public/shapes.js";
+import { SHAPE_PROJECT, PROJECT_SIZE } from "../public/project.js";
 
 describe("shapeForNode", () => {
   test.each(Object.entries(JIRA_RESOURCE_TYPE_SHAPES))("Jira resourceType %s maps to shape %s", (resourceType, expectedShape) => {
@@ -35,6 +36,34 @@ describe("shapeForNode", () => {
 
   test("the other/unknown shape is distinct from every known Jira shape", () => {
     expect(Object.values(JIRA_RESOURCE_TYPE_SHAPES)).not.toContain(SHAPE_ROUNDED_SQUARE);
+  });
+
+  test("a project node (FACTORY-911) gets its own distinct shape, never a type shape", () => {
+    const node = { provider: "jira-project", resourceType: "project" };
+    expect(shapeForNode(node)).toBe(SHAPE_PROJECT);
+    expect(Object.values(JIRA_RESOURCE_TYPE_SHAPES)).not.toContain(SHAPE_PROJECT);
+    expect(SHAPE_PROJECT).not.toBe(SHAPE_STAR);
+    expect(SHAPE_PROJECT).not.toBe(SHAPE_ROUNDED_SQUARE);
+  });
+
+  test("a project node is detected by its provider, not merely its resourceType string", () => {
+    // provider "jira-project" starts with "jira" (isJiraProvider's own prefix test) — the project
+    // check must win BEFORE that fallthrough, or this would wrongly land on roundedSquare.
+    expect(shapeForNode({ provider: "jira-project", resourceType: "project" })).not.toBe(SHAPE_ROUNDED_SQUARE);
+  });
+});
+
+describe("sizeForNode for a project node", () => {
+  test("is the fixed PROJECT_SIZE, not derived from any type tier", () => {
+    const node = { provider: "jira-project", resourceType: "project" };
+    expect(sizeForNode(node)).toBe(PROJECT_SIZE);
+  });
+
+  test("PROJECT_SIZE is larger than every ticket shape's size, so a project always reads as the biggest node", () => {
+    const ticketSizes = Object.keys(JIRA_RESOURCE_TYPE_SHAPES).map((resourceType) =>
+      sizeForNode({ provider: "jira-work", resourceType }),
+    );
+    expect(PROJECT_SIZE).toBeGreaterThan(Math.max(...ticketSizes));
   });
 });
 

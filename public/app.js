@@ -5,6 +5,7 @@ import { classifyQueryRecord, queryStatusLabel } from "./query-status.js";
 import { shapeForNode, SHAPE_HEXAGON, SHAPE_ROUNDED_SQUARE } from "./shapes.js";
 import { scaledSizeForNode } from "./node-scale.js";
 import { computeFitTransform, shouldFit } from "./fit-view.js";
+import { isProjectNode, projectFill, SHAPE_PROJECT, PROJECT_LINK_DISTANCE } from "./project.js";
 
 const LABEL_MAX_CHARS = 22;
 const DEFAULT_REFRESH_SECONDS = 30;
@@ -96,6 +97,7 @@ const D3_SYMBOL_BY_SHAPE = {
   star: d3.symbolStar,
   [SHAPE_HEXAGON]: hexagonSymbol,
   [SHAPE_ROUNDED_SQUARE]: roundedSquareSymbol,
+  [SHAPE_PROJECT]: d3.symbolWye,
 };
 
 function truncateLabel(label) {
@@ -137,6 +139,7 @@ async function main() {
 
   renderBanner(graph);
   renderShapeLegend();
+  renderProjectLegend();
   renderFillLegend();
   renderRingLegend();
   renderSizeLegend(graph);
@@ -180,6 +183,22 @@ function renderShapeLegend() {
     rows.push(`<div class="legend-row">${shapeIconSvg(shape)}<span>${label}</span></div>`);
   }
   el.innerHTML = rows.join("");
+}
+
+/** Project -> shape/colour and `contains` -> line-style legend (FACTORY-911 item 4). */
+function renderProjectLegend() {
+  const el = document.getElementById("project-legend");
+  const theme = currentTheme();
+  const fill = projectFill(theme);
+  const size = 140;
+  const path = d3.symbol().type(D3_SYMBOL_BY_SHAPE[SHAPE_PROJECT]).size(size)();
+  const shapeSvg = `<svg class="shape-icon" width="18" height="18" viewBox="-10 -10 20 20"><path d="${path}" fill="${fill}" stroke="var(--node-stroke)" stroke-width="1.5"></path></svg>`;
+  const lineSvg = `<svg width="28" height="12"><line x1="0" y1="6" x2="28" y2="6" class="edge contains"></line></svg>`;
+  el.innerHTML = [
+    "<h2>Project</h2>",
+    `<div class="legend-row">${shapeSvg}<span>Jira project (fixed shape/colour, no status ring, size never scales)</span></div>`,
+    `<div class="legend-row">${lineSvg}<span>contains (project → Epic)</span></div>`,
+  ].join("");
 }
 
 /** Jira status -> fill legend (FACTORY-900 item 4). Shows the CURRENT theme's actual hexes, not a hardcoded single table. */
@@ -338,9 +357,14 @@ function renderGraph(initialGraph) {
   let links = [];
   let edgeSel = edgeLayer.selectAll("line.edge");
 
+  /** `contains` edges (project -> Epic) use the tighter PROJECT_LINK_DISTANCE so a project's Epics cluster near it, never the general SEER_LINK_DISTANCE every other edge kind uses. */
+  function linkDistanceForLink(link) {
+    return link.kind === "contains" ? PROJECT_LINK_DISTANCE : layoutConfig.linkDistance;
+  }
+
   const simulation = d3
     .forceSimulation(nodes)
-    .force("link", d3.forceLink(links).id((d) => d.id).distance(layoutConfig.linkDistance))
+    .force("link", d3.forceLink(links).id((d) => d.id).distance(linkDistanceForLink))
     .force("charge", d3.forceManyBody().strength(-layoutConfig.charge))
     // Centering/gravity (COMPACT LAYOUT item 3): a per-node spring toward the centre, SEER_GRAVITY
     // strength, so disconnected components drift together instead of spreading into empty space.
@@ -372,8 +396,21 @@ function renderGraph(initialGraph) {
       });
   }
 
+  /** Count of `contains` edges out of a project node — FACTORY-911 item 4's "number of Epics" tooltip field. */
+  function epicCountForProject(projectId) {
+    return links.filter((l) => l.kind === "contains" && (typeof l.source === "object" ? l.source.id : l.source) === projectId).length;
+  }
+
   function showTooltip(event, d) {
-    tooltip.innerHTML = `<dl>
+    // A project node (FACTORY-911) has no resourceType/status/discovery of its own interest — its
+    // tooltip is just the project's key/name and how many Epics it contains, never the ticket dl.
+    tooltip.innerHTML = isProjectNode(d)
+      ? `<dl>
+      <dt>project</dt><dd>${escapeHtml(d.label)}</dd>
+      <dt>epics</dt><dd>${epicCountForProject(d.id)}</dd>
+      <dt>link</dt><dd><a href="${d.url}" target="_blank" rel="noopener">${escapeHtml(d.url)}</a></dd>
+    </dl>`
+      : `<dl>
       <dt>label</dt><dd>${escapeHtml(d.label)}</dd>
       <dt>provider</dt><dd>${escapeHtml(d.provider)}</dd>
       <dt>id</dt><dd>${escapeHtml(d.id)}</dd>
@@ -468,7 +505,9 @@ function renderGraph(initialGraph) {
       .selectAll("line.edge")
       .data(links, edgeKey)
       .join("line")
-      .attr("class", "edge")
+      // `contains` (project -> Epic) draws lighter/thinner than a ticket link (style.css's
+      // `.edge.contains`), but keeps the same >= 3:1 --edge token, never a second colour.
+      .attr("class", (d) => (d.kind === "contains" ? "edge contains" : "edge"))
       .attr("marker-end", "url(#seer-arrowhead)");
   }
 
@@ -486,7 +525,7 @@ function renderGraph(initialGraph) {
   function apply(graph) {
     sizeConfig = sizeConfigFromGraph(graph);
     layoutConfig = layoutConfigFromGraph(graph);
-    simulation.force("link").distance(layoutConfig.linkDistance);
+    simulation.force("link").distance(linkDistanceForLink);
     simulation.force("charge").strength(-layoutConfig.charge);
     simulation.force("x").x(width / 2).strength(layoutConfig.gravity);
     simulation.force("y").y(height / 2).strength(layoutConfig.gravity);
