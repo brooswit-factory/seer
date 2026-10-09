@@ -1,8 +1,61 @@
 import { colorForNode, outlineForNode, statusLabel, STATUS_COLORS, CANNOT_REPORT_COLOR } from "./colors.js";
 import { classifyQueryRecord, queryStatusLabel } from "./query-status.js";
+import { shapeForNode, sizeForNode, SHAPE_HEXAGON, SHAPE_ROUNDED_SQUARE } from "./shapes.js";
 
 const NODE_RADIUS = 9;
 const LABEL_MAX_CHARS = 22;
+
+/** D3 has no builtin hexagon/rounded-square symbol type, so these two are drawn by hand using the same `{ draw(context, size) }` contract every builtin `d3.symbolXxx` implements. */
+const hexagonSymbol = {
+  draw(context, size) {
+    const r = Math.sqrt((2 * size) / (3 * Math.sqrt(3)));
+    for (let i = 0; i < 6; i++) {
+      const angle = (Math.PI / 3) * i - Math.PI / 2;
+      const x = r * Math.cos(angle);
+      const y = r * Math.sin(angle);
+      if (i === 0) context.moveTo(x, y);
+      else context.lineTo(x, y);
+    }
+    context.closePath();
+  },
+};
+
+const roundedSquareSymbol = {
+  draw(context, size) {
+    const half = Math.sqrt(size) / 2;
+    const r = half * 0.3;
+    context.moveTo(-half + r, -half);
+    context.lineTo(half - r, -half);
+    context.quadraticCurveTo(half, -half, half, -half + r);
+    context.lineTo(half, half - r);
+    context.quadraticCurveTo(half, half, half - r, half);
+    context.lineTo(-half + r, half);
+    context.quadraticCurveTo(-half, half, -half, half - r);
+    context.lineTo(-half, -half + r);
+    context.quadraticCurveTo(-half, -half, -half + r, -half);
+    context.closePath();
+  },
+};
+
+const D3_SYMBOL_BY_SHAPE = {
+  circle: d3.symbolCircle,
+  square: d3.symbolSquare,
+  triangle: d3.symbolTriangle,
+  diamond: d3.symbolDiamond,
+  star: d3.symbolStar,
+  [SHAPE_HEXAGON]: hexagonSymbol,
+  [SHAPE_ROUNDED_SQUARE]: roundedSquareSymbol,
+};
+
+function symbolPathForNode(node) {
+  const shape = shapeForNode(node);
+  const size = sizeForNode(node);
+  return d3.symbol().type(D3_SYMBOL_BY_SHAPE[shape]).size(size)();
+}
+
+function approxRadiusForNode(node) {
+  return Math.sqrt(sizeForNode(node) / Math.PI);
+}
 
 function truncateLabel(label) {
   if (label.length <= LABEL_MAX_CHARS) return label;
@@ -17,15 +70,42 @@ async function main() {
 
   document.getElementById("snapshot-timestamp").textContent = `snapshot: ${graph.snapshotTimestamp}`;
 
+  renderShapeLegend();
   renderLegend();
   renderQueries(graph.queries);
   renderGraph(graph);
 }
 
+/** A small standalone SVG rendering one shape, stroked with the current theme's `--shape-stroke` token, for the legend. */
+function shapeIconSvg(shape) {
+  const size = 140; // a fixed legend size, independent of each node's own status-driven size tier
+  const path = d3.symbol().type(D3_SYMBOL_BY_SHAPE[shape]).size(size)();
+  return `<svg class="shape-icon" width="18" height="18" viewBox="-10 -10 20 20"><path d="${path}" fill="var(--muted)" stroke="var(--shape-stroke)" stroke-width="1.5"></path></svg>`;
+}
+
+/** Type -> shape legend (FACTORY-876 item 4) — a different thing from the per-source grouping legend FACTORY-874 removed. */
+function renderShapeLegend() {
+  const el = document.getElementById("shape-legend");
+  const rows = ["<h2>Type → shape</h2>"];
+  const entries = [
+    ["Epic", SHAPE_HEXAGON],
+    ["Story", "square"],
+    ["Task", "circle"],
+    ["Bug", "triangle"],
+    ["Sub-task", "diamond"],
+    ["other/unknown Jira type", SHAPE_ROUNDED_SQUARE],
+    ["non-Jira resource", "star"],
+  ];
+  for (const [label, shape] of entries) {
+    rows.push(`<div class="legend-row">${shapeIconSvg(shape)}<span>${label}</span></div>`);
+  }
+  el.innerHTML = rows.join("");
+}
+
 function renderLegend() {
   const el = document.getElementById("legend");
   const rows = [];
-  rows.push("<h2>Legend</h2>");
+  rows.push("<h2>Status → colour</h2>");
   for (const [status, hex] of Object.entries(STATUS_COLORS)) {
     rows.push(
       `<div class="legend-row"><span class="swatch" style="background:${hex}"></span><span>${status}</span></div>`,
@@ -125,11 +205,13 @@ function renderGraph(graph) {
         }),
     );
 
+  // Shape carries resource type (FACTORY-876 item 3); fill stays agent-status colour from
+  // colors.js, unchanged — type is never encoded in hue.
   nodeSel
-    .append("circle")
-    .attr("r", NODE_RADIUS)
+    .append("path")
+    .attr("d", (d) => symbolPathForNode(d))
     .attr("fill", (d) => colorForNode(d))
-    .attr("stroke", "#11111b")
+    .attr("stroke", "var(--shape-stroke)")
     .attr("stroke-width", 1.5)
     .attr("stroke-dasharray", (d) => (outlineForNode(d) === "dashed" ? "3,2" : null));
 
@@ -145,12 +227,12 @@ function renderGraph(graph) {
     .filter((d) => d.admissionWithheld)
     .append("circle")
     .attr("class", "admission-ring")
-    .attr("r", NODE_RADIUS + 4);
+    .attr("r", (d) => approxRadiusForNode(d) + 4);
 
   nodeSel
     .append("text")
     .attr("class", "node-label")
-    .attr("dy", NODE_RADIUS + 12)
+    .attr("dy", (d) => approxRadiusForNode(d) + 12)
     .attr("text-anchor", "middle")
     .text((d) => truncateLabel(d.label));
 
@@ -160,6 +242,7 @@ function renderGraph(graph) {
       <dt>label</dt><dd>${escapeHtml(d.label)}</dd>
       <dt>provider</dt><dd>${escapeHtml(d.provider)}</dd>
       <dt>id</dt><dd>${escapeHtml(d.id)}</dd>
+      <dt>type</dt><dd>${escapeHtml(d.resourceType ?? "unknown")}</dd>
       <dt>status</dt><dd>${escapeHtml(statusLabel(d))}</dd>
       <dt>discovery</dt><dd>${d.discovery === "query" ? "query hit" : "link-discovered"}</dd>
       <dt>link</dt><dd><a href="${d.url}" target="_blank" rel="noopener">${escapeHtml(d.url)}</a></dd>

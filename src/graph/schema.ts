@@ -36,6 +36,14 @@ export const GraphNodeSchema = z.object({
   admissionWithheld: z.boolean(),
   /** "query": this node matched one of its owning source's queries directly. "link": reached only by one-hop link expansion from a query hit — the viewer must mark these distinctly. */
   discovery: z.enum(["query", "link"]),
+  /**
+   * The kind of resource this node represents, e.g. a Jira issue type name ("Epic", "Story",
+   * "Task", "Bug", "Sub-task", or any other issue type name a Jira instance reports) or a
+   * non-Jira provider's own value (e.g. "pull-request", "github-issue", "confluence-page").
+   * OPTIONAL and absent on old graph.json data — the viewer falls back to an "other/unknown"
+   * shape when it is missing, never a validation failure (FACTORY-876).
+   */
+  resourceType: z.string().min(1).optional(),
 });
 export type GraphNode = z.infer<typeof GraphNodeSchema>;
 

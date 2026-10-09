@@ -1,5 +1,5 @@
 :root {
-  color-scheme: dark;
+  color-scheme: light dark;
   --bg: #1e1e2e;
   --fg: #cdd6f4;
   --panel: #181825;
@@ -7,6 +7,22 @@
   --muted: #a6adc8;
   --danger: #f38ba8;
   --warn: #fab387;
+  /* Node-shape stroke (FACTORY-876 item 3): >= 4.5:1 against --bg in both themes — verified in
+     test/contrast.test.ts, which mirrors these exact values via public/contrast.js. Named
+     identically to what FACTORY-873 is expected to land for its own edge/arrowhead strokes; a
+     trivial rebase conflict here is expected if 873 merges first. */
+  --shape-stroke: #cdd6f4;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #eff1f5;
+    --fg: #4c4f69;
+    --panel: #e6e9ef;
+    --border: #ccd0da;
+    --muted: #6c6f85;
+    --shape-stroke: #4c4f69;
+  }
 }
 
 * {
@@ -94,6 +110,10 @@ header .timestamp {
 .swatch.dashed {
   border-style: dashed;
   border-width: 2px;
+}
+
+.shape-icon {
+  flex-shrink: 0;
 }
 
 .query-row {
