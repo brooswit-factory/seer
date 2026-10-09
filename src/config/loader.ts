@@ -17,12 +17,39 @@ function formatZodError(error: { issues: Array<{ path: Array<string | number>; m
   return `Invalid seer config:\n${lines.join("\n")}`;
 }
 
+/** Matches `currentUser()`, case-insensitive, tolerating whitespace before the parens. */
+const CURRENT_USER_PATTERN = /currentuser\s*\(\s*\)/i;
+
+/**
+ * seer runs every source's queries under its OWN single credential — there
+ * is no per-source butchr session. `currentUser()` would therefore resolve
+ * to seer's own account for every (machine, user) source, silently
+ * collapsing all bubbles onto one identity instead of failing loudly. A
+ * query must name its user explicitly (e.g. an accountId or username).
+ */
+function checkNoCurrentUser(config: SeerConfig): void {
+  for (const [sourceIndex, source] of config.sources.entries()) {
+    for (const [queryIndex, query] of source.queries.entries()) {
+      if (CURRENT_USER_PATTERN.test(query.query)) {
+        throw new ConfigError(
+          `Invalid seer config:\n` +
+            `  - sources.${sourceIndex}.queries.${queryIndex}.query: must not contain currentUser() — ` +
+            `seer runs all queries under ONE credential, so currentUser() would resolve to seer's own ` +
+            `account for every source and silently collapse all bubbles. Name this source's user explicitly ` +
+            `(e.g. an accountId or username) instead.`,
+        );
+      }
+    }
+  }
+}
+
 /** Parse and validate an already-loaded JSON value as a {@link SeerConfig}. Never defaults a malformed value silently. */
 export function parseConfig(data: unknown): SeerConfig {
   const result = SeerConfigSchema.safeParse(data);
   if (!result.success) {
     throw new ConfigError(formatZodError(result.error));
   }
+  checkNoCurrentUser(result.data);
   return result.data;
 }
 

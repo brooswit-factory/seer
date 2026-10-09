@@ -1,9 +1,9 @@
 export {
   QuerySchema,
-  UserSchema,
+  SourceSchema,
   SeerConfigSchema,
   type Query,
-  type User,
+  type Source,
   type SeerConfig,
 } from "./config/schema.ts";
 export { loadConfig, parseConfig, ConfigError } from "./config/loader.ts";

@@ -2,20 +2,24 @@ import { describe, expect, test } from "bun:test";
 import { parseConfig, loadConfig, ConfigError } from "../src/config/loader.ts";
 
 const validConfig = {
-  users: [
-    { id: "u1", displayName: "User One", queries: [{ provider: "jira-work", query: "assignee = currentUser()" }] },
+  sources: [
+    {
+      id: "u1@machine1",
+      machine: "machine1",
+      user: "u1",
+      displayName: "User One @ machine1",
+      queries: [{ provider: "jira-work", query: 'assignee = "u1-account-id"' }],
+    },
   ],
   linkDepth: 2,
-  refreshIntervalSeconds: 30,
   port: 4000,
 };
 
 describe("parseConfig", () => {
   test("accepts a valid config", () => {
     const config = parseConfig(validConfig);
-    expect(config.users).toHaveLength(1);
+    expect(config.sources).toHaveLength(1);
     expect(config.linkDepth).toBe(2);
-    expect(config.refreshIntervalSeconds).toBe(30);
     expect(config.port).toBe(4000);
   });
 
@@ -25,32 +29,47 @@ describe("parseConfig", () => {
     expect(config.linkDepth).toBe(1);
   });
 
-  test("defaults refreshIntervalSeconds to 60 when omitted", () => {
-    const { refreshIntervalSeconds, ...rest } = validConfig;
-    const config = parseConfig(rest);
-    expect(config.refreshIntervalSeconds).toBe(60);
-  });
-
-  test("rejects a config missing users", () => {
+  test("rejects a config missing sources", () => {
     expect(() => parseConfig({ port: 4000 })).toThrow(ConfigError);
     try {
       parseConfig({ port: 4000 });
       throw new Error("expected parseConfig to throw");
     } catch (error) {
-      expect((error as Error).message).toContain("users");
+      expect((error as Error).message).toContain("sources");
     }
   });
 
   test("rejects a malformed query missing its provider field", () => {
     const bad = {
       ...validConfig,
-      users: [{ id: "u1", displayName: "User One", queries: [{ query: "no provider" }] }],
+      sources: [
+        {
+          id: "u1@machine1",
+          machine: "machine1",
+          user: "u1",
+          displayName: "User One @ machine1",
+          queries: [{ query: "no provider" }],
+        },
+      ],
     };
     try {
       parseConfig(bad);
       throw new Error("expected parseConfig to throw");
     } catch (error) {
       expect((error as Error).message).toContain("provider");
+    }
+  });
+
+  test("rejects a source missing its machine field", () => {
+    const bad = {
+      ...validConfig,
+      sources: [{ id: "u1@machine1", user: "u1", displayName: "User One", queries: validConfig.sources[0]?.queries }],
+    };
+    try {
+      parseConfig(bad);
+      throw new Error("expected parseConfig to throw");
+    } catch (error) {
+      expect((error as Error).message).toContain("machine");
     }
   });
 
@@ -64,20 +83,59 @@ describe("parseConfig", () => {
     }
   });
 
-  test("rejects duplicate user ids", () => {
+  test("rejects duplicate source ids", () => {
     const bad = {
       ...validConfig,
-      users: [
-        { id: "dup", displayName: "A", queries: [{ provider: "jira-work", query: "x" }] },
-        { id: "dup", displayName: "B", queries: [{ provider: "jira-work", query: "y" }] },
+      sources: [
+        { id: "dup", machine: "m", user: "a", displayName: "A", queries: [{ provider: "jira-work", query: "x" }] },
+        { id: "dup", machine: "m", user: "b", displayName: "B", queries: [{ provider: "jira-work", query: "y" }] },
       ],
     };
     try {
       parseConfig(bad);
       throw new Error("expected parseConfig to throw");
     } catch (error) {
-      expect((error as Error).message).toContain("duplicate user id");
+      expect((error as Error).message).toContain("duplicate source id");
     }
+  });
+
+  test("refuses a query containing currentUser()", () => {
+    const bad = {
+      ...validConfig,
+      sources: [
+        {
+          id: "u1@machine1",
+          machine: "machine1",
+          user: "u1",
+          displayName: "User One @ machine1",
+          queries: [{ provider: "jira-work", query: "assignee = currentUser()" }],
+        },
+      ],
+    };
+    try {
+      parseConfig(bad);
+      throw new Error("expected parseConfig to throw");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ConfigError);
+      expect((error as Error).message).toContain("currentUser()");
+      expect((error as Error).message).toContain("sources.0.queries.0.query");
+    }
+  });
+
+  test("refuses currentUser() case-insensitively and with whitespace before the parens", () => {
+    const bad = {
+      ...validConfig,
+      sources: [
+        {
+          id: "u1@machine1",
+          machine: "machine1",
+          user: "u1",
+          displayName: "User One @ machine1",
+          queries: [{ provider: "jira-work", query: "assignee = CURRENTUSER  ()" }],
+        },
+      ],
+    };
+    expect(() => parseConfig(bad)).toThrow(ConfigError);
   });
 
   test("never throws a raw stack trace for malformed input", () => {
@@ -95,7 +153,7 @@ describe("parseConfig", () => {
 describe("loadConfig", () => {
   test("parses the committed example config fixture", () => {
     const config = loadConfig(new URL("../fixtures/seer.config.example.json", import.meta.url).pathname);
-    expect(config.users.length).toBeGreaterThanOrEqual(2);
+    expect(config.sources.length).toBeGreaterThanOrEqual(2);
     expect(config.port).toBeGreaterThan(0);
   });
 

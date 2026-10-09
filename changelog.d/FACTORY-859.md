@@ -6,4 +6,4 @@ bump: minor
 - seer graph-JSON schema and validator (`src/graph`).
 - A committed, schema-valid example graph fixture (`fixtures/graph.example.json`) and example config (`fixtures/seer.config.example.json`).
 - Public export surface at `src/index.ts`.
-- GitHub Actions CI (typecheck, lint, test) and the release-gate workflow.
+- GitHub Actions CI (typecheck, test) and the release-gate workflow.

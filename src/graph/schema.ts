@@ -28,8 +28,8 @@ export const GraphNodeSchema = z.object({
   provider: z.string().min(1),
   label: z.string().min(1),
   url: z.string().min(1),
-  /** The butchr user id (config's `users[].id`) this node sits under, for hull grouping. */
-  ownerUserId: z.string().min(1),
+  /** The (machine, user) source id (config's `sources[].id`) this node sits under, for hull grouping. */
+  ownerSourceId: z.string().min(1),
   agentStatus: AgentStatusSchema,
   /** Distinguishes "this provider cannot report status" (false) from "it reports none" (true + agentStatus "none"). */
   providerCanReportStatus: z.boolean(),
@@ -46,7 +46,7 @@ export type GraphEdge = z.infer<typeof GraphEdgeSchema>;
 
 /** One record per configured query, so a failed query is distinguishable from a zero-match one. */
 export const QueryRecordSchema = z.object({
-  userId: z.string().min(1),
+  sourceId: z.string().min(1),
   provider: z.string().min(1),
   query: z.string().min(1),
   matched: z.number().int().min(0),

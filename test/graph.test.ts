@@ -42,14 +42,14 @@ describe("validateGraph", () => {
         provider: "jira-work",
         label: "X-1",
         url: "https://example.com/X-1",
-        ownerUserId: "u1",
+        ownerSourceId: "u1@machine1",
         agentStatus: "working",
         providerCanReportStatus: true,
         admissionWithheld: false,
       },
     ],
     edges: [],
-    queries: [{ userId: "u1", provider: "jira-work", query: "x", matched: 1, error: null }],
+    queries: [{ sourceId: "u1@machine1", provider: "jira-work", query: "x", matched: 1, error: null }],
   };
 
   test("accepts a minimal valid graph", () => {
@@ -77,8 +77,8 @@ describe("validateGraph", () => {
     const withBoth = {
       ...base,
       queries: [
-        { userId: "u1", provider: "jira-work", query: "zero", matched: 0, error: null },
-        { userId: "u1", provider: "jira-work", query: "failed", matched: 0, error: "timeout" },
+        { sourceId: "u1@machine1", provider: "jira-work", query: "zero", matched: 0, error: null },
+        { sourceId: "u1@machine1", provider: "jira-work", query: "failed", matched: 0, error: "timeout" },
       ],
     };
     const result = validateGraph(withBoth);
