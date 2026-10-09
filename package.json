@@ -17,7 +17,8 @@
   "main": "./src/index.ts",
   "scripts": {
     "typecheck": "bun --bun x tsc -p tsconfig.json --noEmit",
-    "test": "bun test"
+    "test": "bun test",
+    "seer": "bun run src/cli.ts"
   },
   "dependencies": {
     "zod": "^3.23.8"

@@ -41,6 +41,8 @@ export const SeerConfigSchema = z
     sources: z.array(SourceSchema).min(1, "sources must contain at least one entry"),
     linkDepth: z.number().int().min(0).default(1),
     port: z.number().int().min(1).max(65535),
+    /** Plain per-query result cap so one runaway query cannot hang a snapshot run. A capped query is marked `truncated` in the graph JSON, never silently read as the whole answer. */
+    resultCap: z.number().int().min(1).default(50),
   })
   .superRefine((config, ctx) => {
     const seen = new Set<string>();

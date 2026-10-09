@@ -34,6 +34,8 @@ export const GraphNodeSchema = z.object({
   /** Distinguishes "this provider cannot report status" (false) from "it reports none" (true + agentStatus "none"). */
   providerCanReportStatus: z.boolean(),
   admissionWithheld: z.boolean(),
+  /** "query": this node matched one of its owning source's queries directly. "link": reached only by one-hop link expansion from a query hit — the viewer must mark these distinctly. */
+  discovery: z.enum(["query", "link"]),
 });
 export type GraphNode = z.infer<typeof GraphNodeSchema>;
 
@@ -51,6 +53,8 @@ export const QueryRecordSchema = z.object({
   query: z.string().min(1),
   matched: z.number().int().min(0),
   error: z.string().nullable().optional(),
+  /** True when this query's results were cut off by the per-query result cap — `matched` is the capped count, not the true total. */
+  truncated: z.boolean().default(false),
 });
 export type QueryRecord = z.infer<typeof QueryRecordSchema>;
 

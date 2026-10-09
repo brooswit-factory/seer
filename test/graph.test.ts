@@ -46,10 +46,11 @@ describe("validateGraph", () => {
         agentStatus: "working",
         providerCanReportStatus: true,
         admissionWithheld: false,
+        discovery: "query",
       },
     ],
     edges: [],
-    queries: [{ sourceId: "u1@machine1", provider: "jira-work", query: "x", matched: 1, error: null }],
+    queries: [{ sourceId: "u1@machine1", provider: "jira-work", query: "x", matched: 1, error: null, truncated: false }],
   };
 
   test("accepts a minimal valid graph", () => {
@@ -67,13 +68,24 @@ describe("validateGraph", () => {
     expect(validateGraph(bad).valid).toBe(false);
   });
 
+  test("rejects an invalid discovery value — it is not an open string", () => {
+    const bad = { ...base, nodes: [{ ...base.nodes[0], discovery: "guessed" }] };
+    expect(validateGraph(bad).valid).toBe(false);
+  });
+
+  test("the fixture's query-hit nodes and link-discovered nodes are both represented", () => {
+    const fixture = loadFixture() as { nodes: Array<{ discovery: string }> };
+    const discoveries = new Set(fixture.nodes.map((n) => n.discovery));
+    expect(discoveries).toEqual(new Set(["query", "link"]));
+  });
+
   test("parseGraph throws a clear error naming the field path", () => {
     expect(() => parseGraph({ ...base, nodes: [{ ...base.nodes[0], agentStatus: "unknown" }] })).toThrow(
       /agentStatus/,
     );
   });
 
-  test("distinguishes a failed query from a zero-match query", () => {
+  test("distinguishes a failed query from a zero-match query: the error field itself differs, not just validity", () => {
     const withBoth = {
       ...base,
       queries: [
@@ -83,5 +95,22 @@ describe("validateGraph", () => {
     };
     const result = validateGraph(withBoth);
     expect(result.valid).toBe(true);
+    const zero = result.data?.queries.find((q) => q.query === "zero");
+    const failed = result.data?.queries.find((q) => q.query === "failed");
+    // Both matched 0 — the distinction this ticket requires to survive into the UI lives ONLY
+    // in `error`, so assert that field directly rather than just re-checking validity.
+    expect(zero?.error).toBeNull();
+    expect(failed?.error).toBe("timeout");
+    expect(zero?.error).not.toBe(failed?.error);
+  });
+
+  test("parseGraph returns the validated object (with defaults applied), not a cast of the input", () => {
+    const withoutTruncated = {
+      ...base,
+      queries: [{ sourceId: "u1@machine1", provider: "jira-work", query: "x", matched: 1, error: null }],
+    };
+    const parsed = parseGraph(withoutTruncated);
+    expect(parsed).not.toBe(withoutTruncated);
+    expect(parsed.queries[0]?.truncated).toBe(false);
   });
 });
