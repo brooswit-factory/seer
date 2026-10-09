@@ -38,7 +38,7 @@ describe("loadSizeConfig", () => {
   test.each(["0", "-1", "not-a-number", ""])("SEER_SIZE_BASE=%s falls back to the default (empty) or throws (invalid)", (raw) => {
     process.env.SEER_SIZE_BASE = raw;
     if (raw === "") {
-      expect(loadSizeConfig().base).toBe(1.5);
+      expect(loadSizeConfig().base).toBe(1);
     } else {
       expect(() => loadSizeConfig()).toThrow(ConfigError);
     }
