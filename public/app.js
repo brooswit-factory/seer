@@ -1,10 +1,16 @@
-import { colorForNode, statusLabel, STATUS_COLORS, CANNOT_REPORT_COLOR } from "./colors.js";
-import { jiraStatusLabel, JIRA_STATUS_BORDERS } from "./jira-status.js";
+import { colorForNode, STATUS_COLORS, CANNOT_REPORT_COLOR } from "./colors.js";
+import { jiraBorderForNode, JIRA_STATUS_BORDERS } from "./jira-status.js";
 import { classifyQueryRecord, queryStatusLabel } from "./query-status.js";
 import { shapeForNode, borderForNode, fillInsetForNode, shouldShowDiscoveryDot, BORDER_GAP_WIDTH, SHAPE_HEXAGON, SHAPE_ROUNDED_SQUARE } from "./shapes.js";
 import { scaledSizeForNode } from "./node-scale.js";
 import { computeFitTransform, shouldFit } from "./fit-view.js";
 import { isProjectNode, projectFill, SHAPE_PROJECT, PROJECT_LINK_DISTANCE } from "./project.js";
+import { nodeInfoHtml, escapeHtml } from "./node-info.js";
+import { createSelectionState, select as selectNode, deselect as deselectNode, reconcileSelection } from "./selection.js";
+import { sortNodesForSidebar, filterNodesForSidebar } from "./sidebar-list.js";
+
+/** Extra radius (px), on top of the admission ring's own gap, the selection halo (FACTORY-957 item 4) is drawn at — distinct from `ADMISSION_RING_GAP` below so the two rings never collide even when a node has both. */
+const SELECTION_HALO_GAP = 13;
 
 const LABEL_MAX_CHARS = 22;
 const DEFAULT_REFRESH_SECONDS = 30;
@@ -145,6 +151,13 @@ function renderBanner(graph) {
   }
 }
 
+/**
+ * FACTORY-957: left node-list sidebar + right-panel legend/node-info toggle. `main()` owns the
+ * one `selectionState` value (public/selection.js's pure reducer) and is the sole writer of it —
+ * `renderGraph`'s returned API mirrors just the id for haloing/panning, and the DOM glue below
+ * (list rows, filter box, close button, keyboard nav) only ever calls the reducer functions, never
+ * mutates DOM selection state directly.
+ */
 async function main() {
   const graph = await fetchGraph();
 
@@ -155,7 +168,130 @@ async function main() {
   renderBorderLegend();
   renderSizeLegend(graph);
   renderQueries(graph.queries);
-  const update = renderGraph(graph);
+
+  let selectionState = createSelectionState();
+  let filterQuery = "";
+
+  const graphApi = renderGraph(graph, {
+    // Graph click: the node is already on screen, so no pan — just halo + swap the right panel.
+    onNodeClick: (id) => {
+      selectionState = selectNode(selectionState, id);
+      syncSelectionUI();
+    },
+    onBackgroundClick: () => {
+      selectionState = deselectNode(selectionState);
+      syncSelectionUI();
+    },
+  });
+
+  /** List click (or Enter on a focused row): select AND pan/halo to the node (FACTORY-957 item 4) — the one path that passes `pan: true`. */
+  function selectFromList(id) {
+    selectionState = selectNode(selectionState, id);
+    graphApi.setSelectedId(id, { pan: true });
+    renderNodeListView();
+    renderRightPanelView();
+  }
+
+  /** Graph-click/background-click/close-button path: halo (no pan) then refresh both panels. */
+  function syncSelectionUI() {
+    graphApi.setSelectedId(selectionState.selectedId);
+    renderNodeListView();
+    renderRightPanelView();
+  }
+
+  function renderNodeListView() {
+    renderNodeList(graphApi.getNodes(), selectionState.selectedId, filterQuery);
+  }
+
+  function renderRightPanelView() {
+    const legendView = document.getElementById("legend-view");
+    const infoView = document.getElementById("node-info-view");
+    const node = selectionState.selectedId == null ? null : graphApi.getNodeById(selectionState.selectedId);
+    if (!node) {
+      legendView.hidden = false;
+      infoView.hidden = true;
+      return;
+    }
+    document.getElementById("node-info-content").innerHTML = nodeInfoHtml(node, {
+      epicCount: isProjectNode(node) ? graphApi.epicCountForProject(node.id) : 0,
+    });
+    legendView.hidden = true;
+    infoView.hidden = false;
+  }
+
+  /** Builds the left sidebar's `<li role="option">` rows: sorted + filtered (public/sidebar-list.js), each showing the node's shape icon, fill/border swatches, id ("key"), and label. */
+  function renderNodeList(allNodes, selectedId, query) {
+    const listEl = document.getElementById("node-list");
+    const filtered = filterNodesForSidebar(sortNodesForSidebar(allNodes), query);
+    listEl.innerHTML = "";
+
+    if (filtered.length === 0) {
+      const empty = document.createElement("li");
+      empty.className = "node-list-empty";
+      empty.textContent = "No matching nodes.";
+      listEl.appendChild(empty);
+      return;
+    }
+
+    const theme = currentTheme();
+    let selectedRow = null;
+    for (const node of filtered) {
+      const isSelected = node.id === selectedId;
+      const fill = isProjectNode(node) ? projectFill(theme) : colorForNode(node, theme);
+      const border = isProjectNode(node) ? null : jiraBorderForNode(node, theme);
+
+      const li = document.createElement("li");
+      li.className = "node-row";
+      li.setAttribute("role", "option");
+      li.setAttribute("aria-selected", String(isSelected));
+      li.dataset.id = node.id;
+      li.tabIndex = isSelected ? 0 : -1;
+      li.innerHTML = `${shapeIconSvg(shapeForNode(node))}<span class="swatch" style="background:${fill}"></span>${
+        border ? `<span class="border-swatch" style="border-color:${border}"></span>` : ""
+      }<span class="node-row-key">${escapeHtml(node.id)}</span><span class="node-row-label">${escapeHtml(node.label)}</span>`;
+      li.addEventListener("click", () => selectFromList(node.id));
+      listEl.appendChild(li);
+      if (isSelected) selectedRow = li;
+    }
+    // Auto-scroll the selected row into view (FACTORY-957 item 1), without stealing focus from
+    // wherever the user currently has it (e.g. mid-typing in the filter box).
+    selectedRow?.scrollIntoView({ block: "nearest" });
+  }
+
+  document.getElementById("node-filter").addEventListener("input", (event) => {
+    filterQuery = event.target.value;
+    renderNodeListView();
+  });
+
+  document.getElementById("node-info-close").addEventListener("click", () => {
+    selectionState = deselectNode(selectionState);
+    syncSelectionUI();
+  });
+
+  // Keyboard nav (FACTORY-957 item 1: "arrows to move, Enter to select"), a simple roving
+  // tabindex: ArrowDown/ArrowUp move focus one row (clamped, no wraparound — chosen default, see
+  // the PR description), Enter selects whichever row currently has focus.
+  document.getElementById("node-list").addEventListener("keydown", (event) => {
+    const items = Array.from(document.querySelectorAll("#node-list .node-row"));
+    if (items.length === 0) return;
+    const currentIndex = items.indexOf(document.activeElement);
+
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      const delta = event.key === "ArrowDown" ? 1 : -1;
+      const nextIndex = Math.min(items.length - 1, Math.max(0, currentIndex === -1 ? 0 : currentIndex + delta));
+      for (const item of items) item.tabIndex = -1;
+      items[nextIndex].tabIndex = 0;
+      items[nextIndex].focus();
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      const target = items[currentIndex === -1 ? 0 : currentIndex];
+      selectFromList(target.dataset.id);
+    }
+  });
+
+  renderNodeListView();
+  renderRightPanelView();
 
   const intervalMs = Math.max(1, graph.refreshSeconds ?? DEFAULT_REFRESH_SECONDS) * 1000;
   setInterval(async () => {
@@ -163,7 +299,18 @@ async function main() {
       const next = await fetchGraph();
       renderBanner(next);
       renderQueries(next.queries);
-      update(next);
+      graphApi.apply(next);
+
+      // FACTORY-957 item 2: selection persists across refresh by node id, and clears
+      // automatically if the selected node disappeared.
+      const presentIds = new Set(graphApi.getNodes().map((n) => n.id));
+      const reconciled = reconcileSelection(selectionState, presentIds);
+      if (reconciled !== selectionState) {
+        selectionState = reconciled;
+        graphApi.setSelectedId(null);
+      }
+      renderNodeListView();
+      renderRightPanelView();
     } catch (err) {
       console.error("seer: refresh failed", err);
     }
@@ -282,10 +429,6 @@ function renderQueries(queries) {
   el.innerHTML = rows.join("");
 }
 
-function escapeHtml(s) {
-  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-}
-
 function edgeKey(e) {
   const source = typeof e.source === "object" ? e.source.id : e.source;
   const target = typeof e.target === "object" ? e.target.id : e.target;
@@ -300,7 +443,7 @@ function edgeKey(e) {
  * dropped — the simulation is only gently reheated (`alpha`, not restarted) when the node/edge
  * set actually changed, so unaffected nodes never jump.
  */
-function renderGraph(initialGraph) {
+function renderGraph(initialGraph, { onNodeClick, onBackgroundClick } = {}) {
   const wrap = document.getElementById("graph-wrap");
   const width = wrap.clientWidth;
   const height = wrap.clientHeight;
@@ -312,6 +455,10 @@ function renderGraph(initialGraph) {
   // behaviour programmatically with no `sourceEvent`. COMPACT LAYOUT item 1: once true, a refresh
   // keeps the user's own transform instead of re-fitting out from under them.
   let userTransformed = false;
+  // The currently-selected node id (FACTORY-957 item 2), owned by `main()`'s selection reducer —
+  // mirrored here only so the D3 render loop knows which node to halo. `main()` is the only
+  // writer, via the returned `setSelectedId`.
+  let selectedNodeId = null;
 
   const svg = d3.select("#graph").attr("width", width).attr("height", height);
   const root = svg.append("g");
@@ -320,6 +467,14 @@ function renderGraph(initialGraph) {
     if (event.sourceEvent) userTransformed = true;
   });
   svg.call(zoomBehavior);
+  // Empty-canvas click deselects (FACTORY-957 item 2/spec: "Clicking empty canvas ... deselects
+  // and returns to the legend"). `event.target === svg.node()` is true only when the click lands
+  // on the SVG background itself — a click on a node's `<g class="node">` (or any shape/text
+  // inside it) targets that element, never the outer `<svg>`, so this never fires for a node click
+  // (no stopPropagation needed on the node handler above).
+  svg.on("click", (event) => {
+    if (event.target === svg.node()) onBackgroundClick?.();
+  });
 
   function symbolPathForNode(node) {
     const shape = shapeForNode(node);
@@ -367,6 +522,26 @@ function renderGraph(initialGraph) {
   }
 
   document.getElementById("fit-button")?.addEventListener("click", () => fit({ force: true }));
+
+  /**
+   * Pans (keeping the CURRENT zoom level) to centre a node selected from the left list
+   * (FACTORY-957 item 4) — a distinct helper from `fit()`, not a reuse of it: `fit()` always
+   * re-computes a bounding-box scale for every node, which is the wrong shape of transform for
+   * "centre on one node without changing zoom". The ticket's actual requirement this exists to
+   * satisfy is narrower than sharing code with `fit()` — it is that this must NOT be "another
+   * `fit({force: true})`", i.e. it must never reset `userTransformed`. A programmatic
+   * `zoomBehavior.transform` call never sets `userTransformed = true` either (only a real gesture,
+   * `event.sourceEvent`, does — see the `zoomBehavior.on("zoom", ...)` handler above), so this
+   * transform is invisible to that flag either way: a user's prior manual pan/zoom is neither
+   * overridden nor newly recorded by selecting from the list.
+   */
+  function panToSelectedNode(node) {
+    if (!node || typeof node.x !== "number" || typeof node.y !== "number") return;
+    const k = d3.zoomTransform(svg.node()).k;
+    const x = width / 2 - k * node.x;
+    const y = height / 2 - k * node.y;
+    svg.transition().duration(300).call(zoomBehavior.transform, d3.zoomIdentity.translate(x, y).scale(k));
+  }
 
   const defs = svg.append("defs");
   defs
@@ -435,25 +610,11 @@ function renderGraph(initialGraph) {
     return links.filter((l) => l.kind === "contains" && (typeof l.source === "object" ? l.source.id : l.source) === projectId).length;
   }
 
+  // Content is built by `nodeInfoHtml` (public/node-info.js) — a pure function of the datum `d`,
+  // the SAME one the right-panel node-info view (wired in `main()`) calls. `showTooltip` itself
+  // only ever handles cursor positioning now (FACTORY-957 item 2's required split).
   function showTooltip(event, d) {
-    // A project node (FACTORY-911) has no resourceType/status/discovery of its own interest — its
-    // tooltip is just the project's key/name and how many Epics it contains, never the ticket dl.
-    tooltip.innerHTML = isProjectNode(d)
-      ? `<dl>
-      <dt>project</dt><dd>${escapeHtml(d.label)}</dd>
-      <dt>epics</dt><dd>${epicCountForProject(d.id)}</dd>
-      <dt>link</dt><dd><a href="${d.url}" target="_blank" rel="noopener">${escapeHtml(d.url)}</a></dd>
-    </dl>`
-      : `<dl>
-      <dt>label</dt><dd>${escapeHtml(d.label)}</dd>
-      <dt>provider</dt><dd>${escapeHtml(d.provider)}</dd>
-      <dt>id</dt><dd>${escapeHtml(d.id)}</dd>
-      <dt>type</dt><dd>${escapeHtml(d.resourceType ?? "unknown")}</dd>
-      <dt>jira status</dt><dd>${escapeHtml(jiraStatusLabel(d))}</dd>
-      <dt>status</dt><dd>${escapeHtml(statusLabel(d))}</dd>
-      <dt>discovery</dt><dd>${d.discovery === "query" ? "query hit" : "link-discovered"}</dd>
-      <dt>link</dt><dd><a href="${d.url}" target="_blank" rel="noopener">${escapeHtml(d.url)}</a></dd>
-    </dl>`;
+    tooltip.innerHTML = nodeInfoHtml(d, { epicCount: isProjectNode(d) ? epicCountForProject(d.id) : 0 });
     tooltip.style.visibility = "visible";
     tooltip.style.left = `${event.offsetX + 16}px`;
     tooltip.style.top = `${event.offsetY + 16}px`;
@@ -487,7 +648,14 @@ function renderGraph(initialGraph) {
     entered.append("path").attr("class", "node-border-ring").attr("fill", "none");
     entered.append("path").attr("class", "node-shape");
     entered.append("text").attr("class", "node-label").attr("text-anchor", "middle");
-    entered.on("mouseenter", showTooltip).on("mousemove", showTooltip).on("mouseleave", hideTooltip).on("click", showTooltip);
+    entered.on("mouseenter", showTooltip).on("mousemove", showTooltip).on("mouseleave", hideTooltip);
+    // Click selects the node (FACTORY-957 item 2's "select ... via graph click") IN ADDITION to
+    // the existing click-shows-tooltip behaviour above (hover's own mouseenter/mousemove/
+    // mouseleave trio is untouched — "Hover keeps its current tooltip behaviour unchanged").
+    entered.on("click", (event, d) => {
+      showTooltip(event, d);
+      onNodeClick?.(d.id);
+    });
 
     const merged = entered.merge(sel);
 
@@ -557,7 +725,34 @@ function renderGraph(initialGraph) {
       }
     });
 
+    updateSelectionHalo(merged);
+
     return merged;
+  }
+
+  /**
+   * Presence-toggles the `.selection-halo` ring (FACTORY-957 item 4) on whichever single node
+   * matches `selectedNodeId` — same "toggle by presence, re-derive the radius every pass" pattern
+   * the admission ring/discovery dot above already use, since both the selected id and a node's
+   * own size can change between calls. Takes the already-`merged` selection so a selection change
+   * (via `setSelectedId`, outside a full `apply()`) can restyle instantly without re-running the
+   * whole `renderNodeSelection` join.
+   */
+  function updateSelectionHalo(sel) {
+    sel.each(function (d) {
+      const g = d3.select(this);
+      const hasHalo = !g.select("circle.selection-halo").empty();
+      const shouldHaveHalo = d.id === selectedNodeId;
+      if (shouldHaveHalo && !hasHalo) {
+        // Inserted before "text", same as the admission ring/discovery dot above, so the node's
+        // own label stays readable on top of the halo rather than the halo painting over it.
+        g.insert("circle", "text").attr("class", "selection-halo").attr("r", approxRadiusForNode(d) + ADMISSION_RING_GAP + SELECTION_HALO_GAP);
+      } else if (!shouldHaveHalo && hasHalo) {
+        g.select("circle.selection-halo").remove();
+      } else if (shouldHaveHalo && hasHalo) {
+        g.select("circle.selection-halo").attr("r", approxRadiusForNode(d) + ADMISSION_RING_GAP + SELECTION_HALO_GAP);
+      }
+    });
   }
 
   function renderEdgeSelection() {
@@ -645,8 +840,27 @@ function renderGraph(initialGraph) {
     fit();
   }
 
+  /**
+   * Sets which node is haloed (FACTORY-957 item 4) — `main()`'s selection reducer is the only
+   * caller, on every select/deselect/reconcile. Restyles the halo immediately via
+   * `updateSelectionHalo` (not just on the next `apply()`), and optionally pans to the node
+   * (`pan: true`, used only for a LIST-originated selection — a graph click needs no pan, the
+   * clicked node is already on screen).
+   */
+  function setSelectedId(nodeId, { pan = false } = {}) {
+    selectedNodeId = nodeId;
+    updateSelectionHalo(nodeSel);
+    if (pan && nodeId != null) panToSelectedNode(nodeById.get(nodeId));
+  }
+
   apply(initialGraph);
-  return apply;
+  return {
+    apply,
+    setSelectedId,
+    getNodes: () => nodes,
+    getNodeById: (id) => nodeById.get(id),
+    epicCountForProject,
+  };
 }
 
 main().catch((err) => {
