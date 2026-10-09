@@ -12,6 +12,7 @@
 // area by `m * m`.
 
 import { sizeForNode } from "./shapes.js";
+import { isProjectNode } from "./project.js";
 
 /** Jira issue-type name -> the `sizeConfig` key that type's multiplier lives under. Absent for every type that falls through to `base`. */
 const SIZE_CONFIG_KEY_BY_RESOURCE_TYPE = Object.freeze({
@@ -35,8 +36,14 @@ export function sizeMultiplierForNode(node, sizeConfig) {
   return sizeConfig[key ?? "base"];
 }
 
-/** The node's final area (d3-symbol units): its per-type base area (shapes.js) scaled by the squared linear multiplier. */
+/**
+ * The node's final area (d3-symbol units): its per-type base area (shapes.js) scaled by the
+ * squared linear multiplier — EXCEPT a project node (FACTORY-911), whose fixed size is never
+ * multiplied by SEER_SIZE_BASE/ACTIVE at all (it has no agent to report a live/base status for
+ * in the first place).
+ */
 export function scaledSizeForNode(node, sizeConfig) {
+  if (isProjectNode(node)) return sizeForNode(node);
   const multiplier = sizeMultiplierForNode(node, sizeConfig);
   return sizeForNode(node) * multiplier * multiplier;
 }

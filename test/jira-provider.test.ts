@@ -142,6 +142,37 @@ describe("JiraProvider.runQuery", () => {
     expect(matches.find((m) => m.id === "jira-work:X-3")?.resourceType).toBeUndefined();
   });
 
+  test("requests project in the fields list (FACTORY-911)", async () => {
+    let calledUrl = "";
+    const fetchImpl = (async (url: string | URL) => {
+      calledUrl = String(url);
+      return new Response(JSON.stringify({ issues: [issue("X-1")], isLast: true }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const provider = new JiraProvider({ baseUrl: "https://example.atlassian.net", email: "a@b.com", apiToken: "tok", fetchImpl });
+
+    await provider.runQuery("project = X", 10);
+
+    expect(decodeURIComponent(calledUrl)).toContain("fields=summary,labels,issuelinks,parent,issuetype,status,project");
+  });
+
+  test("maps the issue's project (key + name) onto match.project, with a browse URL", async () => {
+    const fetchImpl = (async () =>
+      new Response(
+        JSON.stringify({ issues: [issue("X-1", { project: { key: "FACTORY", name: "factory" } }), issue("X-2", {})], isLast: true }),
+        { status: 200 },
+      )) as unknown as typeof fetch;
+    const provider = new JiraProvider({ baseUrl: "https://example.atlassian.net", email: "a@b.com", apiToken: "tok", fetchImpl });
+
+    const { matches } = await provider.runQuery("q", 10);
+
+    expect(matches.find((m) => m.id === "jira-work:X-1")?.project).toEqual({
+      key: "FACTORY",
+      name: "factory",
+      url: "https://example.atlassian.net/browse/FACTORY",
+    });
+    expect(matches.find((m) => m.id === "jira-work:X-2")?.project).toBeUndefined();
+  });
+
   test("truncation: requesting cap+1 and getting more than cap back marks truncated, matched is capped", async () => {
     const fetchImpl = (async (url: string | URL) => {
       // the endpoint reports no total — the provider must request cap+1 itself to detect this
@@ -202,6 +233,16 @@ describe("JiraProvider.fetchById", () => {
     await provider.fetchById("jira-work:X-9");
 
     expect(calledUrl).toContain("status");
+  });
+
+  test("maps project for a single-issue fetch too (FACTORY-911 — link-discovered Epics still need it)", async () => {
+    const fetchImpl = (async () =>
+      new Response(JSON.stringify(issue("X-9", { project: { key: "FACTORY", name: "factory" } })), { status: 200 })) as unknown as typeof fetch;
+    const provider = new JiraProvider({ baseUrl: "https://example.atlassian.net", email: "a@b.com", apiToken: "tok", fetchImpl });
+
+    const match = await provider.fetchById("jira-work:X-9");
+
+    expect(match?.project).toEqual({ key: "FACTORY", name: "factory", url: "https://example.atlassian.net/browse/FACTORY" });
   });
 
   test("maps jiraStatus for a single-issue fetch too", async () => {

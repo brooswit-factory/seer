@@ -18,6 +18,13 @@ export interface ProviderMatch {
   resourceType?: string;
   /** The resource's Jira workflow status, name + category. Optional — absent on a non-Jira provider's match. */
   jiraStatus?: JiraStatus;
+  /**
+   * The Jira project this issue belongs to (FACTORY-911): key + display name + the project's own
+   * browse URL, set by a Jira-backed provider off the issue's `project` field. The collector uses
+   * this — not anything provider-specific — to synthesise one node per project; absent on a
+   * non-Jira provider's match.
+   */
+  project?: { key: string; name: string; url: string };
   links: ProviderLink[];
 }
 

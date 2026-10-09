@@ -23,6 +23,10 @@ interface JiraIssueStatus {
   name: string;
   statusCategory: { key: string };
 }
+interface JiraIssueProject {
+  key: string;
+  name: string;
+}
 interface JiraIssueFields {
   summary: string;
   labels?: string[];
@@ -30,6 +34,7 @@ interface JiraIssueFields {
   parent?: { key: string };
   issuetype?: { name: string };
   status?: JiraIssueStatus;
+  project?: JiraIssueProject;
 }
 interface JiraIssue {
   key: string;
@@ -54,7 +59,7 @@ interface JiraSearchResponse {
  * shipped a bug by adding `issuetype` to the JQL search but not the single-issue fetch — sharing
  * one constant makes that class of drift impossible.
  */
-const JIRA_FIELDS = "summary,labels,issuelinks,parent,issuetype,status";
+const JIRA_FIELDS = "summary,labels,issuelinks,parent,issuetype,status,project";
 
 const STATUS_CATEGORY_KEYS = new Set(["new", "indeterminate", "done"]);
 
@@ -107,6 +112,11 @@ export class JiraProvider implements Provider {
     return `${this.baseUrl}/browse/${key}`;
   }
 
+  /** A Jira project's own browse URL — same `/browse/<KEY>` convention as an issue's, which Jira resolves to the project when the key names a project rather than an issue. */
+  private projectUrl(key: string): string {
+    return `${this.baseUrl}/browse/${key}`;
+  }
+
   private toMatch(issue: JiraIssue): ProviderMatch {
     const labels = issue.fields.labels ?? [];
     let agentStatus: AgentStatus = "none";
@@ -129,6 +139,7 @@ export class JiraProvider implements Provider {
       links.push({ targetId: this.canonicalId(issue.fields.parent.key), kind: "parent" });
     }
     const jiraStatus = jiraStatusFromIssue(issue.fields.status);
+    const project = issue.fields.project;
 
     return {
       id: this.canonicalId(issue.key),
@@ -140,6 +151,7 @@ export class JiraProvider implements Provider {
       admissionWithheld,
       ...(issue.fields.issuetype?.name !== undefined ? { resourceType: issue.fields.issuetype.name } : {}),
       ...(jiraStatus !== undefined ? { jiraStatus } : {}),
+      ...(project !== undefined ? { project: { key: project.key, name: project.name, url: this.projectUrl(project.key) } } : {}),
       links,
     };
   }

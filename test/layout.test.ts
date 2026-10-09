@@ -17,6 +17,7 @@ import { readFileSync } from "node:fs";
 import { forceSimulation, forceLink, forceManyBody, forceX, forceY, forceCollide } from "d3-force";
 import { scaledSizeForNode } from "../public/node-scale.js";
 import { computeFitTransform, LABEL_FONT_PX } from "../public/fit-view.js";
+import { PROJECT_LINK_DISTANCE } from "../public/project.js";
 
 const VIEWPORT_WIDTH = 1440;
 const VIEWPORT_HEIGHT = 900;
@@ -128,5 +129,135 @@ describe("real-data (~136 node) layout settles into a 1440x900 viewport after fi
     }
     console.log(`layout check: worst node-pair overlap = ${worstOverlap.toFixed(2)}px`);
     expect(worstOverlap).toBeLessThanOrEqual(OVERLAP_TOLERANCE_PX);
+  });
+});
+
+/**
+ * FACTORY-911 item 5: the same real-data layout check, plus 5 synthesised project nodes each
+ * `contains`-linked to one Epic already in the fixture — mirrors `public/app.js`'s per-edge-kind
+ * `linkDistanceForLink` (PROJECT_LINK_DISTANCE for `contains`, the general layout distance for
+ * everything else) and `scaledSizeForNode`'s project fast-path (fixed size, never
+ * SEER_SIZE_BASE/ACTIVE), so this reproduces the real viewer's physics, not a simplified stand-in.
+ */
+describe("real-data layout + 5 project nodes still fits a 1440x900 viewport", () => {
+  const fixture = loadFixture();
+  const epicIds = fixture.nodes.filter((n: any) => n.resourceType === "Epic").map((n: any) => n.id);
+  // Guard the test's own premise: with no Epics in the fixture, every project node would be
+  // unlinked and this would silently stop exercising the "cluster near its Epics" requirement.
+  if (epicIds.length === 0) throw new Error("test fixture has no Epic nodes to attach project nodes to");
+
+  const projectNodes = Array.from({ length: 5 }, (_, i) => ({
+    id: `jira-project:SYNTH${i}`,
+    provider: "jira-project",
+    resourceType: "project",
+    label: `SYNTH${i} synthetic project ${i}`,
+    url: `https://example.com/browse/SYNTH${i}`,
+    ownerSourceId: fixture.nodes[0].ownerSourceId,
+    agentStatus: "none",
+    providerCanReportStatus: false,
+    admissionWithheld: false,
+    discovery: "query",
+  }));
+  const containsEdges = projectNodes.map((p, i) => ({
+    source: p.id,
+    target: epicIds[i % epicIds.length],
+    kind: "contains",
+  }));
+  const graphWithProjects = {
+    ...fixture,
+    nodes: [...fixture.nodes, ...projectNodes],
+    edges: [...fixture.edges, ...containsEdges],
+  };
+
+  function linkDistanceForLink(link: any) {
+    return link.kind === "contains" ? PROJECT_LINK_DISTANCE : LAYOUT_CONFIG.linkDistance;
+  }
+
+  function settleWithProjectAwareLink(graph: any, { width = VIEWPORT_WIDTH, height = VIEWPORT_HEIGHT } = {}): AnyNode[] {
+    const nodes: AnyNode[] = graph.nodes.map((n: any, i: number) => ({
+      ...n,
+      x: width / 2 + Math.cos(i) * 50,
+      y: height / 2 + Math.sin(i) * 50,
+    }));
+    const nodeIds = new Set(nodes.map((n) => n.id));
+    const links = graph.edges
+      .filter((e: any) => nodeIds.has(e.source) && nodeIds.has(e.target))
+      .map((e: any) => ({ source: e.source, target: e.target, kind: e.kind }));
+
+    const simulation = forceSimulation(nodes)
+      .force("link", forceLink(links).id((d: any) => d.id).distance(linkDistanceForLink))
+      .force("charge", forceManyBody().strength(-LAYOUT_CONFIG.charge))
+      .force("x", forceX(width / 2).strength(LAYOUT_CONFIG.gravity))
+      .force("y", forceY(height / 2).strength(LAYOUT_CONFIG.gravity))
+      .force("collide", forceCollide((d: any) => approxRadius(d) + COLLIDE_PADDING))
+      .stop();
+
+    for (let i = 0; i < 1000 && simulation.alpha() > simulation.alphaMin(); i++) {
+      simulation.tick();
+    }
+    return nodes;
+  }
+
+  const settled = settleWithProjectAwareLink(graphWithProjects);
+
+  test("136-node fixture plus 5 project nodes settle (141 nodes total)", () => {
+    expect(settled.length).toBe(fixture.nodes.length + 5);
+  });
+
+  test("project nodes keep their fixed size, never scaled by SEER_SIZE_BASE/ACTIVE", () => {
+    for (const p of settled.filter((n: any) => n.provider === "jira-project")) {
+      expect(approxRadius(p)).toBe(Math.sqrt(scaledSizeForNode(p, SIZE_CONFIG) / Math.PI));
+      // Re-running with wildly different multipliers must not move a project node's radius at all.
+      const radiusUnderDifferentConfig = Math.sqrt(scaledSizeForNode(p, { epic: 10, bug: 10, story: 10, base: 10 }) / Math.PI);
+      expect(radiusUnderDifferentConfig).toBe(approxRadius(p));
+    }
+  });
+
+  test("fit-to-view still produces a readable, finite transform with project nodes present", () => {
+    const points = settled.map((d) => ({ x: d.x, y: d.y, r: approxRadius(d) }));
+    const fitTransform = computeFitTransform(points, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+    expect(Number.isFinite(fitTransform.k)).toBe(true);
+    expect(LABEL_FONT_PX * fitTransform.k).toBeGreaterThanOrEqual(10);
+  });
+
+  test("the settled, fitted bounding box (136 real nodes + 5 project nodes) still fits the 1440x900 viewport", () => {
+    const points = settled.map((d) => ({ x: d.x, y: d.y, r: approxRadius(d) }));
+    const fitTransform = computeFitTransform(points, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const p of points) {
+      const sx = p.x * fitTransform.k + fitTransform.x;
+      const sy = p.y * fitTransform.k + fitTransform.y;
+      const sr = p.r * fitTransform.k;
+      minX = Math.min(minX, sx - sr);
+      maxX = Math.max(maxX, sx + sr);
+      minY = Math.min(minY, sy - sr);
+      maxY = Math.max(maxY, sy + sr);
+    }
+
+    const margin = 60; // same loose margin as the base 136-node check above.
+    expect(minX).toBeGreaterThanOrEqual(-margin);
+    expect(maxX).toBeLessThanOrEqual(VIEWPORT_WIDTH + margin);
+    expect(minY).toBeGreaterThanOrEqual(-margin);
+    expect(maxY).toBeLessThanOrEqual(VIEWPORT_HEIGHT + margin);
+
+    console.log(
+      `layout+projects check: ${settled.length} nodes, fit k=${fitTransform.k.toFixed(3)}, ` +
+        `bbox=[${minX.toFixed(0)},${minY.toFixed(0)}]..[${maxX.toFixed(0)},${maxY.toFixed(0)}] vs viewport 1440x900`,
+    );
+  });
+
+  test("a project node's Epics cluster near it: mean project-to-its-Epic distance is well under the general link distance", () => {
+    const byId = new Map(settled.map((n: any) => [n.id, n]));
+    const distances = containsEdges.map((e) => {
+      const source = byId.get(e.source)!;
+      const target = byId.get(e.target)!;
+      return Math.hypot(source.x - target.x, source.y - target.y);
+    });
+    const mean = distances.reduce((a, b) => a + b, 0) / distances.length;
+    // A generous multiple of PROJECT_LINK_DISTANCE, not an exact pin — the force simulation
+    // settles near its target distance but other forces (charge, collision, gravity) pull it
+    // around; this only needs to rule out "spread across a huge empty area" per the ticket.
+    expect(mean).toBeLessThan(PROJECT_LINK_DISTANCE * 4);
   });
 });

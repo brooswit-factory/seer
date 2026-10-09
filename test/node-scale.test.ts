@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { JIRA_RESOURCE_TYPE_SHAPES, sizeForNode } from "../public/shapes.js";
 import { scaledSizeForNode, sizeMultiplierForNode } from "../public/node-scale.js";
+import { PROJECT_SIZE } from "../public/project.js";
 
 const SIZE_CONFIG = { epic: 3, bug: 3, story: 2, base: 1.5 };
 
@@ -59,5 +60,13 @@ describe("every scaled size is a positive, finite number", () => {
     const size = scaledSizeForNode(node(resourceType), SIZE_CONFIG);
     expect(Number.isFinite(size)).toBe(true);
     expect(size).toBeGreaterThan(0);
+  });
+});
+
+describe("scaledSizeForNode: project nodes (FACTORY-911)", () => {
+  test("a project node is never scaled by any size multiplier — returns its fixed PROJECT_SIZE", () => {
+    const projectNode = { provider: "jira-project", resourceType: "project" };
+    expect(scaledSizeForNode(projectNode, SIZE_CONFIG)).toBe(PROJECT_SIZE);
+    expect(scaledSizeForNode(projectNode, { epic: 10, bug: 10, story: 10, base: 10 })).toBe(PROJECT_SIZE);
   });
 });
