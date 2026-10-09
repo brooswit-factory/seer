@@ -161,6 +161,27 @@ header .timestamp.stale {
   overflow: hidden;
 }
 
+.sidebar-header {
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 10px 0;
+}
+
+#animation-toggle {
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+}
+
+#animation-toggle:hover {
+  background: var(--border);
+}
+
 #node-filter {
   margin: 10px;
   padding: 6px 8px;
@@ -429,4 +450,87 @@ header .timestamp.stale {
   stroke-width: 2;
   stroke-dasharray: 4 3;
   pointer-events: none;
+}
+
+/*
+ * Agent-status pulse (FACTORY-975/FACTORY-974): WORKING pulses the node's own fill shape
+ * (`path.node-shape`) INWARD — border untouched, light attention. STALLED and BLOCKED instead
+ * pulse the Jira-status border (`path.node-border-ring` + `path.node-border-gap`, so the ring and
+ * its canvas gap grow together) OUTWARD — fill untouched, heavier attention than working, and
+ * BLOCKED heavier/faster than STALLED. CSS `@keyframes` + `transform: scale()` only — see
+ * public/app.js's `applyPulseClasses`, which just toggles these class names and a per-node
+ * `--pulse-delay` custom property on refresh; nothing here is driven by a JS render loop.
+ *
+ * `transform-box: fill-box` + `transform-origin: center` scale each path about its OWN bounding
+ * box centre, not the translated `<g class="node">` group's origin (0,0 pre-translate) — scaling
+ * the group itself would also move the node, which the LAYOUT SAFETY requirement rules out.
+ *
+ * Max scale (border 1.2x BLOCKED, 1.12x STALLED) stays well inside the existing
+ * `ADMISSION_RING_GAP`/label clearance already computed from each node's own (small, ~7-9px)
+ * radius — a 20% growth on a 7-9px radius is <= ~2px, comfortably inside the 9px admission-ring
+ * gap and the two-line label's own bbox margin (`labelBottomExtent`, app.js) already used for
+ * fit-to-view — so neither needs a bbox change for this feature.
+ */
+.pulse-body-working,
+.pulse-border-stalled,
+.pulse-border-blocked {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation-delay: var(--pulse-delay, 0s);
+}
+
+.pulse-body-working {
+  animation: seer-pulse-body-working 2.4s ease-in-out infinite;
+}
+
+.pulse-border-stalled {
+  animation: seer-pulse-border-stalled 1.6s ease-in-out infinite;
+}
+
+.pulse-border-blocked {
+  animation: seer-pulse-border-blocked 0.9s ease-in-out infinite;
+}
+
+@keyframes seer-pulse-body-working {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.9);
+  }
+}
+
+@keyframes seer-pulse-border-stalled {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.12);
+  }
+}
+
+@keyframes seer-pulse-border-blocked {
+  0%,
+  100% {
+    transform: scale(1);
+    stroke-width: 3.5px;
+  }
+  50% {
+    /* "slightly thicker stroke at peak" (ticket default) — BORDER_WIDTH (shapes.js) is 3.5px. */
+    transform: scale(1.2);
+    stroke-width: 4.5px;
+  }
+}
+
+/* Honour prefers-reduced-motion: reduce (ACCESSIBILITY/CONTROLS requirement) — no animation at
+   all under it, independent of the JS pause toggle (app.js's `animation-toggle`/`animationsEnabled`),
+   which this media query cannot see and does not need to. */
+@media (prefers-reduced-motion: reduce) {
+  .pulse-body-working,
+  .pulse-border-stalled,
+  .pulse-border-blocked {
+    animation: none;
+  }
 }
