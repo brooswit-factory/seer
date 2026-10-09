@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>seer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>seer</h1>
+      <span class="timestamp" id="snapshot-timestamp"></span>
+    </header>
+    <div id="graph-wrap">
+      <svg id="graph"></svg>
+      <div id="tooltip"></div>
+    </div>
+    <aside id="sidebar">
+      <section id="legend"></section>
+      <section id="queries"></section>
+    </aside>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -6,32 +6,53 @@ D3 graph of every matched resource plus everything it links to, coloured by
 the resource's agent status and grouped into hulls by the (machine, user)
 pair it sits under.
 
-This repo (seer S1, FACTORY-853/FACTORY-859) is the project skeleton: one
-install command, minimal CI, the two data contracts every later story writes
-against — the config schema and the graph-JSON schema — their loader and
-validator, and a small committed fixture. It deliberately does **not**
-implement query execution, link expansion, status reading, colour mapping,
-or any D3 rendering — that is FACTORY-855's MVP vertical slice.
+seer ships the MVP vertical slice (FACTORY-855/FACTORY-869): the config and
+graph-JSON schemas (FACTORY-853), a Jira collector, and a plain static D3
+viewer served by one command on localhost.
 
 ## What exists now vs. later
 
-- **Now (this repo):** the config shape + loader/validator, the graph-JSON
-  shape + validator, a fake fixture, and the public import path. You can
-  install and typecheck/test this repo; there is nothing to *run* yet.
-- **Later (FACTORY-855):** actually executing each source's queries against
-  its provider, expanding links one hop, reading `agent:*` status labels off
-  the provider's own resources, applying the colour table, rendering the D3
-  force graph, and serving it from one command on localhost.
+- **Now:** the config + graph-JSON schemas and their loader/validator, a Jira
+  collector (query execution, one-hop link expansion, dedupe, atomic
+  snapshot write), a plain static D3 viewer (hulls per source, herdr colours,
+  legend, tooltip, failed/truncated query indication), and `bun run seer`
+  (serve) / `bun run seer collect` (snapshot).
 - **Deliberately deferred past the MVP (FACTORY-841's LATER list):** reaching
   each machine's own butchr daemon (seer never contacts a butchr daemon — see
-  below), a refresh/poll loop, filtering/search/saved layouts, and
-  cross-platform packaging beyond one install command.
+  below), a refresh/poll loop, filtering/search/saved layouts, GitHub as a
+  provider, and cross-platform packaging beyond one install command.
 
-## Install
+## Install & run
 
 ```
 bun install
+bun run seer            # serves the viewer on localhost and opens the browser
 ```
+
+With no `graph.json` yet, the viewer falls back to the committed fixture so
+the one command always shows something. To collect a real snapshot from
+Jira:
+
+```
+JIRA_BASE_URL=https://yoursite.atlassian.net JIRA_EMAIL=you@example.com JIRA_API_TOKEN=... \
+  bun run seer collect fixtures/seer.config.example.json
+bun run seer
+```
+
+## The viewer
+
+`public/` is a plain static page (D3 loaded from a CDN `<script>` tag, no
+bundler): `index.html`, `app.js` (the force-directed graph, hulls, tooltip,
+legend, query panel), `colors.js` (the ONE herdr-verified status→colour
+table, also imported directly by `test/colors.test.ts`), and
+`query-status.js` (classifies a query record as ok / zero-match / failed /
+truncated — also imported directly by its test).
+
+**Shared-node attribution decision** (FACTORY-855 item 3): when the same
+resource is reached by more than one source, a direct query hit always wins
+over a link-discovery, regardless of which source found it; if two sources'
+queries both match it directly, whichever source is listed first in the
+config keeps it. See `src/collector/collect.ts`'s `upsertNode`.
 
 ## Settled decisions
 
@@ -64,35 +85,41 @@ comments.)
   telling the author to name their user explicitly (an accountId or
   username) instead.
 
-The planned node-colour table (herdr's status→hex mapping) is recorded in
-FACTORY-841's DECISIONS comment; this repo does not implement it.
+The node-colour table (herdr's status→hex mapping, FACTORY-841 decision 5) is
+implemented in `public/colors.js` — verified against herdr's own
+`status_color` function and its default Catppuccin Mocha palette in a
+herdrdev/herdr checkout; herdr has no `stalled` counterpart at all, which is
+why that one entry is seer/butchr's own decision rather than a herdr value.
 
 ## The schemas
 
-Both are exported from a single public entry point, `src/index.ts`, so later
-stories import types rather than redeclaring them.
+Both are exported from a single public entry point, `src/index.ts`, so other
+code imports types rather than redeclaring them.
 
 - **Config schema** (`src/config/schema.ts`, loader in `src/config/loader.ts`):
   parses and validates seer's own config file — `sources[]` (each a stable
   id, machine, user, display name, and queries), a link-expansion depth
-  (`linkDepth`, default 1), and a `port`. Duplicate source ids are rejected.
-  Invalid config throws a `ConfigError` naming the offending field path —
-  never a silent default, never a raw stack trace.
+  (`linkDepth`, default 1), a per-query result cap (`resultCap`, default 50),
+  and a `port`. Duplicate source ids are rejected. Invalid config throws a
+  `ConfigError` naming the offending field path — never a silent default,
+  never a raw stack trace.
 
 - **Graph JSON schema** (`src/graph/schema.ts`, validator in
-  `src/graph/validate.ts`): the artifact the (future) collector writes and
-  the (future) viewer reads. Per node: a canonical provider-qualified id,
-  provider, label, URL, owning source id (`ownerSourceId`, for hull
-  grouping), one of butchr's five `agent:*` statuses
-  (`working | idle | blocked | stalled | none`), whether the provider is even
-  capable of reporting status (`providerCanReportStatus` — distinguishes
-  "cannot report" from "reports none"), and whether an admission-withheld
-  marker is present. Per edge: source id, target id, and a small closed
-  `kind` enum (`implements | blocks | relates | parent | link`); edges must
-  reference existing node ids. Top-level: a schema version, an ISO-8601
-  snapshot timestamp, the nodes and edges, and a per-query record
-  (`sourceId`, `provider`, `query`, `matched` count, `error`) so a failed
-  query stays distinguishable from a zero-match one.
+  `src/graph/validate.ts`): the artifact the collector writes and the viewer
+  reads. Per node: a canonical provider-qualified id, provider, label, URL,
+  owning source id (`ownerSourceId`, for hull grouping), one of butchr's five
+  `agent:*` statuses (`working | idle | blocked | stalled | none`), whether
+  the provider is even capable of reporting status
+  (`providerCanReportStatus` — distinguishes "cannot report" from "reports
+  none"), whether an admission-withheld marker is present, and `discovery`
+  (`"query" | "link"` — whether a source's query matched this node directly
+  or it was only reached by link expansion). Per edge: source id, target id,
+  and a small closed `kind` enum (`implements | blocks | relates | parent |
+  link`); edges must reference existing node ids. Top-level: a schema
+  version, an ISO-8601 snapshot timestamp, the nodes and edges, and a
+  per-query record (`sourceId`, `provider`, `query`, `matched` count,
+  `error`, `truncated`) so a failed query stays distinguishable from a
+  zero-match one, and a capped result stays labelled as capped.
 
 ## Fixture
 
