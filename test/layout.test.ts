@@ -20,7 +20,7 @@ import { computeFitTransform, LABEL_FONT_PX } from "../public/fit-view.js";
 
 const VIEWPORT_WIDTH = 1440;
 const VIEWPORT_HEIGHT = 900;
-const SIZE_CONFIG = { base: 2, active: 8 };
+const SIZE_CONFIG = { base: 1.5, active: 2 };
 const LAYOUT_CONFIG = { linkDistance: 40, charge: 120, gravity: 0.08 };
 const COLLIDE_PADDING = 4;
 /** Small tolerance for edge-case floating-point overlap at shape corners, not a real design gap. */

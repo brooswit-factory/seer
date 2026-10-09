@@ -22,6 +22,18 @@ export type AgentStatus = z.infer<typeof AgentStatusSchema>;
 export const EdgeKindSchema = z.enum(["implements", "blocks", "relates", "parent", "link"]);
 export type EdgeKind = z.infer<typeof EdgeKindSchema>;
 
+/**
+ * A Jira issue's workflow status (FACTORY-900): `name` is the status's own display name (e.g.
+ * "To Do", "In Review", or any custom status a project defines), `category` is Jira's own
+ * closed three-value `statusCategory.key` ("new" | "indeterminate" | "done") the viewer falls
+ * back to for a status name it does not specifically recognize.
+ */
+export const JiraStatusSchema = z.object({
+  name: z.string().min(1),
+  category: z.enum(["new", "indeterminate", "done"]),
+});
+export type JiraStatus = z.infer<typeof JiraStatusSchema>;
+
 export const GraphNodeSchema = z.object({
   /** Canonical provider-qualified id, e.g. "jira-work:FACTORY-859". Unique within the graph. */
   id: z.string().min(1),
@@ -44,6 +56,12 @@ export const GraphNodeSchema = z.object({
    * shape when it is missing, never a validation failure (FACTORY-876).
    */
   resourceType: z.string().min(1).optional(),
+  /**
+   * The node's Jira workflow status. OPTIONAL and absent on old graph.json data and on
+   * non-Jira-provider nodes — the viewer falls back to a neutral fill when it is missing, never
+   * a validation failure (FACTORY-900, same backward-compat pattern as `resourceType`).
+   */
+  jiraStatus: JiraStatusSchema.optional(),
 });
 export type GraphNode = z.infer<typeof GraphNodeSchema>;
 

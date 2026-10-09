@@ -1,4 +1,4 @@
-import type { AgentStatus, EdgeKind } from "../graph/schema.ts";
+import type { AgentStatus, EdgeKind, JiraStatus } from "../graph/schema.ts";
 import type { Provider, ProviderLink, ProviderMatch } from "./types.ts";
 
 const AGENT_STATUS_LABELS: Record<string, AgentStatus> = {
@@ -19,12 +19,17 @@ interface JiraIssueLink {
   inwardIssue?: { key: string };
   outwardIssue?: { key: string };
 }
+interface JiraIssueStatus {
+  name: string;
+  statusCategory: { key: string };
+}
 interface JiraIssueFields {
   summary: string;
   labels?: string[];
   issuelinks?: JiraIssueLink[];
   parent?: { key: string };
   issuetype?: { name: string };
+  status?: JiraIssueStatus;
 }
 interface JiraIssue {
   key: string;
@@ -42,6 +47,22 @@ interface JiraSearchResponse {
   issues: JiraIssue[];
   isLast?: boolean;
   nextPageToken?: string;
+}
+
+/**
+ * The single fields list both `search` and `fetchById` request (FACTORY-900): FACTORY-876 nearly
+ * shipped a bug by adding `issuetype` to the JQL search but not the single-issue fetch — sharing
+ * one constant makes that class of drift impossible.
+ */
+const JIRA_FIELDS = "summary,labels,issuelinks,parent,issuetype,status";
+
+const STATUS_CATEGORY_KEYS = new Set(["new", "indeterminate", "done"]);
+
+function jiraStatusFromIssue(status: JiraIssueStatus | undefined): JiraStatus | undefined {
+  if (!status) return undefined;
+  const key = status.statusCategory.key;
+  const category: JiraStatus["category"] = STATUS_CATEGORY_KEYS.has(key) ? (key as JiraStatus["category"]) : "new";
+  return { name: status.name, category };
 }
 
 function edgeKindForLinkType(name: string): EdgeKind {
@@ -107,6 +128,7 @@ export class JiraProvider implements Provider {
     if (issue.fields.parent) {
       links.push({ targetId: this.canonicalId(issue.fields.parent.key), kind: "parent" });
     }
+    const jiraStatus = jiraStatusFromIssue(issue.fields.status);
 
     return {
       id: this.canonicalId(issue.key),
@@ -117,6 +139,7 @@ export class JiraProvider implements Provider {
       providerCanReportStatus: true,
       admissionWithheld,
       ...(issue.fields.issuetype?.name !== undefined ? { resourceType: issue.fields.issuetype.name } : {}),
+      ...(jiraStatus !== undefined ? { jiraStatus } : {}),
       links,
     };
   }
@@ -125,7 +148,7 @@ export class JiraProvider implements Provider {
     const params = new URLSearchParams({
       jql,
       maxResults: String(maxResults),
-      fields: "summary,labels,issuelinks,parent,issuetype",
+      fields: JIRA_FIELDS,
     });
     const url = `${this.baseUrl}/rest/api/3/search/jql?${params}`;
     const response = await this.fetchImpl(url, {
@@ -151,7 +174,7 @@ export class JiraProvider implements Provider {
     const prefix = `${this.name}:`;
     if (!id.startsWith(prefix)) return null;
     const key = id.slice(prefix.length);
-    const url = `${this.baseUrl}/rest/api/3/issue/${encodeURIComponent(key)}?fields=summary,labels,issuelinks,parent,issuetype`;
+    const url = `${this.baseUrl}/rest/api/3/issue/${encodeURIComponent(key)}?fields=${JIRA_FIELDS}`;
     const response = await this.fetchImpl(url, {
       method: "GET",
       headers: { authorization: this.authHeader, accept: "application/json" },
