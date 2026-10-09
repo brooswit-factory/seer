@@ -2,23 +2,24 @@ import { describe, expect, test } from "bun:test";
 import { CANNOT_REPORT_COLOR, STATUS_COLORS, colorForNode, outlineForNode, statusLabel } from "../public/colors.js";
 import { COLORBLIND_TYPES, rgbDistance, simulateColorblind } from "../public/colorblind.js";
 
-// FACTORY-944/FACTORY-943: Brooswit's requested agent-status fill palette, REPLACING the
-// FACTORY-841 herdr-verified table this file used to pin — working/idle are swapped (working is
-// now green, idle is now yellow); blocked/stalled/none are unchanged in both role and hex. See
-// public/colors.js's header comment for the light/dark Catppuccin source tokens.
+// FACTORY-963/FACTORY-965 (via FACTORY-966): idle and stalled swap roles again — idle moves off
+// FACTORY-944's yellow to cyan, stalled moves off its orange/peach to yellow. working/blocked/none
+// are unchanged in both role and hex (that was the FACTORY-944 swap, a different, earlier one).
+// See public/colors.js's header comment for the light/dark source tokens and the colour-blind
+// math each new hex was verified against.
 const EXPECTED = {
   light: {
     working: "#40a02b",
     blocked: "#d20f39",
-    idle: "#ffe63c",
-    stalled: "#fe640b",
+    idle: "#04a5e5",
+    stalled: "#df8e1d",
     none: "#9ca0b0",
   },
   dark: {
     working: "#a6e3a1",
     blocked: "#f38ba8",
-    idle: "#f9e2af",
-    stalled: "#fab387",
+    idle: "#acf0f6",
+    stalled: "#f9e2af",
     none: "#6c7086",
   },
 };
@@ -77,12 +78,15 @@ describe("colorForNode / outlineForNode", () => {
   });
 });
 
-// PR #29 review item 2: an earlier light-theme Idle hex read as "orange-ish", close enough to
-// Stalled's orange to raise a colour-blind-safety question explicitly, not just by incidental
-// coverage of some larger pairwise matrix (which would also flag Working/Blocked and
-// Blocked/Stalled — a pre-existing red/green/orange tension in colours this ticket didn't touch
-// at all, out of scope here).
-describe("Idle vs Stalled stay colour-blind-distinguishable (FACTORY-944, PR #29 review item 2)", () => {
+// PR #29 review item 2 (FACTORY-944): an earlier light-theme Idle hex read as "orange-ish",
+// close enough to Stalled's then-orange to raise a colour-blind-safety question explicitly, not
+// just by incidental coverage of some larger pairwise matrix (which would also flag Working/
+// Blocked and Blocked/Stalled — a pre-existing red/green/orange tension in colours that ticket
+// didn't touch at all, out of scope there). Named explicitly here (not just covered incidentally
+// by the full border-vs-fill loop in test/jira-status.test.ts) so this pair keeps getting a
+// pointed test even now that FACTORY-963/FACTORY-965 have reassigned both roles — idle is cyan
+// and stalled is yellow, not yellow and orange — generic over STATUS_COLORS either way.
+describe("Idle vs Stalled stay colour-blind-distinguishable (FACTORY-944, PR #29 review item 2; roles reassigned by FACTORY-963/FACTORY-965)", () => {
   test.each(["light", "dark"] as const)("%s theme", (theme) => {
     const idle = hexToRgb(STATUS_COLORS[theme].idle);
     const stalled = hexToRgb(STATUS_COLORS[theme].stalled);
