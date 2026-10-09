@@ -9,8 +9,8 @@ afterEach(() => {
 });
 
 describe("loadSizeConfig", () => {
-  test("defaults to base=2, active=8 when unset", () => {
-    expect(loadSizeConfig()).toEqual({ base: 2, active: 8 });
+  test("defaults to base=1.5, active=2 when unset (FACTORY-900 item 6, latest revision)", () => {
+    expect(loadSizeConfig()).toEqual({ base: 1.5, active: 2 });
   });
 
   test("reads valid env overrides", () => {
@@ -19,10 +19,15 @@ describe("loadSizeConfig", () => {
     expect(loadSizeConfig()).toEqual({ base: 3, active: 9.5 });
   });
 
+  test("accepts a decimal value > 0 (FACTORY-900: 1.5 must pass)", () => {
+    process.env.SEER_SIZE_BASE = "1.5";
+    expect(loadSizeConfig().base).toBe(1.5);
+  });
+
   test.each(["0", "-1", "not-a-number", ""])("SEER_SIZE_BASE=%s falls back to the default (empty) or throws (invalid)", (raw) => {
     process.env.SEER_SIZE_BASE = raw;
     if (raw === "") {
-      expect(loadSizeConfig().base).toBe(2);
+      expect(loadSizeConfig().base).toBe(1.5);
     } else {
       expect(() => loadSizeConfig()).toThrow(ConfigError);
     }
@@ -31,6 +36,11 @@ describe("loadSizeConfig", () => {
   test("rejects a non-positive SEER_SIZE_ACTIVE", () => {
     process.env.SEER_SIZE_ACTIVE = "-8";
     expect(() => loadSizeConfig()).toThrow(/SEER_SIZE_ACTIVE/);
+  });
+
+  test("rejects NaN", () => {
+    process.env.SEER_SIZE_ACTIVE = "NaN";
+    expect(() => loadSizeConfig()).toThrow(ConfigError);
   });
 });
 

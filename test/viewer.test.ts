@@ -22,9 +22,9 @@ describe("viewer: no per-user grouping", () => {
     expect(css).not.toMatch(/hull/i);
   });
 
-  test("the status legend (agent status colours) is still rendered", () => {
+  test("the agent-status ring legend (agent status colours) is still rendered", () => {
     const appJs = readViewerFile("app.js");
-    expect(appJs).toMatch(/renderLegend/);
+    expect(appJs).toMatch(/renderRingLegend/);
     expect(appJs).toMatch(/STATUS_COLORS/);
   });
 
@@ -36,8 +36,23 @@ describe("viewer: no per-user grouping", () => {
     }
   });
 
-  test("nodes are still coloured via colors.js, untouched", () => {
+  test("agent status moved to the ring, drawn via colors.js (unchanged) through agent-ring.js (FACTORY-900)", () => {
     const appJs = readViewerFile("app.js");
-    expect(appJs).toMatch(/colorForNode/);
+    const agentRingJs = readViewerFile("agent-ring.js");
+    expect(appJs).toMatch(/agentRingForNode/);
+    expect(agentRingJs).toMatch(/colorForNode/);
+  });
+
+  test("node fill is the Jira-status palette (public/jira-status.js), not colors.js (FACTORY-900)", () => {
+    const appJs = readViewerFile("app.js");
+    expect(appJs).toMatch(/jiraFillForNode/);
+  });
+
+  test("the discovery dot is a fixed-radius constant, never scaled by node size (FACTORY-900 item 7)", () => {
+    const appJs = readViewerFile("app.js");
+    expect(appJs).toMatch(/DISCOVERY_DOT_RADIUS\s*=\s*2\.5/);
+    expect(appJs).toMatch(/discovery-dot["'][\s\S]{0,40}DISCOVERY_DOT_RADIUS/);
+    // The dot must never be multiplied by scaledSizeForNode/sizeConfig — only the constant itself.
+    expect(appJs).not.toMatch(/discovery-dot[\s\S]{0,120}scaledSizeForNode/);
   });
 });

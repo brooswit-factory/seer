@@ -153,6 +153,23 @@ header .timestamp.stale {
   border-width: 2px;
 }
 
+/* Agent-status ring legend (FACTORY-900): a hollow circle (no fill) with a thick coloured
+   border, mirroring how the ring is actually drawn around a node — never a filled swatch, since
+   the ring itself is never a fill. */
+.ring-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: none;
+  border: 3.5px solid;
+}
+
+.ring-swatch.dashed {
+  border-style: dashed;
+  border-width: 1.5px;
+}
+
 .shape-icon {
   flex-shrink: 0;
 }

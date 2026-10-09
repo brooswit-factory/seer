@@ -97,7 +97,27 @@ describe("JiraProvider.runQuery", () => {
 
     await provider.runQuery("project = X", 10);
 
-    expect(decodeURIComponent(calledUrl)).toContain("fields=summary,labels,issuelinks,parent,issuetype");
+    expect(decodeURIComponent(calledUrl)).toContain("fields=summary,labels,issuelinks,parent,issuetype,status");
+  });
+
+  test("maps the Jira status name + statusCategory.key onto jiraStatus (FACTORY-900)", async () => {
+    const fetchImpl = (async () =>
+      new Response(
+        JSON.stringify({
+          issues: [
+            issue("X-1", { status: { name: "In Review", statusCategory: { key: "indeterminate" } } }),
+            issue("X-2", {}),
+          ],
+          isLast: true,
+        }),
+        { status: 200 },
+      )) as unknown as typeof fetch;
+    const provider = new JiraProvider({ baseUrl: "https://example.atlassian.net", email: "a@b.com", apiToken: "tok", fetchImpl });
+
+    const { matches } = await provider.runQuery("q", 10);
+
+    expect(matches.find((m) => m.id === "jira-work:X-1")?.jiraStatus).toEqual({ name: "In Review", category: "indeterminate" });
+    expect(matches.find((m) => m.id === "jira-work:X-2")?.jiraStatus).toBeUndefined();
   });
 
   test("maps the Jira issuetype name onto resourceType", async () => {
@@ -169,6 +189,29 @@ describe("JiraProvider.fetchById", () => {
     expect(calledUrl).toContain("/rest/api/3/issue/X-9");
     expect(calledUrl).toContain("issuetype");
     expect(match?.id).toBe("jira-work:X-9");
+  });
+
+  test("requests status in the fields list too (FACTORY-900 — FACTORY-876 almost shipped this gap once already: issuetype landed on search but not fetchById)", async () => {
+    let calledUrl = "";
+    const fetchImpl = (async (url: string | URL) => {
+      calledUrl = String(url);
+      return new Response(JSON.stringify(issue("X-9")), { status: 200 });
+    }) as unknown as typeof fetch;
+    const provider = new JiraProvider({ baseUrl: "https://example.atlassian.net", email: "a@b.com", apiToken: "tok", fetchImpl });
+
+    await provider.fetchById("jira-work:X-9");
+
+    expect(calledUrl).toContain("status");
+  });
+
+  test("maps jiraStatus for a single-issue fetch too", async () => {
+    const fetchImpl = (async () =>
+      new Response(JSON.stringify(issue("X-9", { status: { name: "Done", statusCategory: { key: "done" } } })), { status: 200 })) as unknown as typeof fetch;
+    const provider = new JiraProvider({ baseUrl: "https://example.atlassian.net", email: "a@b.com", apiToken: "tok", fetchImpl });
+
+    const match = await provider.fetchById("jira-work:X-9");
+
+    expect(match?.jiraStatus).toEqual({ name: "Done", category: "done" });
   });
 
   test("returns null for an id with a different provider prefix, without calling fetch", async () => {
