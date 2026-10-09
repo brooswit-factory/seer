@@ -21,7 +21,7 @@ import { PROJECT_LINK_DISTANCE } from "../public/project.js";
 
 const VIEWPORT_WIDTH = 1440;
 const VIEWPORT_HEIGHT = 900;
-const SIZE_CONFIG = { base: 1.5, active: 2 };
+const SIZE_CONFIG = { epic: 3, bug: 3, story: 2, base: 1.5 };
 const LAYOUT_CONFIG = { linkDistance: 40, charge: 120, gravity: 0.08 };
 const COLLIDE_PADDING = 4;
 /** Small tolerance for edge-case floating-point overlap at shape corners, not a real design gap. */
@@ -208,7 +208,7 @@ describe("real-data layout + 5 project nodes still fits a 1440x900 viewport", ()
     for (const p of settled.filter((n: any) => n.provider === "jira-project")) {
       expect(approxRadius(p)).toBe(Math.sqrt(scaledSizeForNode(p, SIZE_CONFIG) / Math.PI));
       // Re-running with wildly different multipliers must not move a project node's radius at all.
-      const radiusUnderDifferentConfig = Math.sqrt(scaledSizeForNode(p, { base: 10, active: 50 }) / Math.PI);
+      const radiusUnderDifferentConfig = Math.sqrt(scaledSizeForNode(p, { epic: 10, bug: 10, story: 10, base: 10 }) / Math.PI);
       expect(radiusUnderDifferentConfig).toBe(approxRadius(p));
     }
   });

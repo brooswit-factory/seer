@@ -109,12 +109,15 @@ export const GraphSchema = z.object({
   /** The server's configured cache TTL in seconds, echoed so the viewer polls on the same interval. */
   refreshSeconds: z.number().int().positive().optional(),
   /**
-   * Node-size multipliers (FACTORY-890), from `SEER_SIZE_BASE`/`SEER_SIZE_ACTIVE` — echoed so the
-   * viewer never hardcodes them. `sizeActive` REPLACES `sizeBase` for a live-agent node, it is
-   * never stacked on top of it.
+   * Node-size multipliers (FACTORY-913), from `SEER_SIZE_EPIC`/`SEER_SIZE_BUG`/`SEER_SIZE_STORY`/
+   * `SEER_SIZE_BASE` — echoed so the viewer never hardcodes them. `sizeBase` applies to every
+   * node whose resource type has no setting of its own (Task, Sub-task, any other/unknown Jira
+   * issue type, and every non-Jira provider node).
    */
+  sizeEpic: z.number().positive().optional(),
+  sizeBug: z.number().positive().optional(),
+  sizeStory: z.number().positive().optional(),
   sizeBase: z.number().positive().optional(),
-  sizeActive: z.number().positive().optional(),
   /** Compact-layout force-simulation constants (FACTORY-890), from `SEER_LINK_DISTANCE`/`SEER_CHARGE`/`SEER_GRAVITY`. */
   linkDistance: z.number().positive().optional(),
   charge: z.number().positive().optional(),

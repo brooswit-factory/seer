@@ -1,13 +1,17 @@
 import { ConfigError } from "./loader.ts";
 
 /**
- * Node-size multipliers (FACTORY-890): `base` applies to every node, `active` REPLACES it
- * (never stacks) for a node with a live agent — see `public/node-scale.js`'s `isLiveAgentNode`
- * for the exact definition of "live agent" these multipliers key off of.
+ * Node-size multipliers (FACTORY-913): one linear multiplier per Jira resource type that gets its
+ * own setting (Epic, Bug, Story), plus `base` for everything else — Task, Sub-task, any other/
+ * unknown Jira issue type, and every non-Jira provider node. REPLACES the earlier live-agent size
+ * bump (`SEER_SIZE_ACTIVE`) and the single flat `base` tier from FACTORY-890/900: a live agent is
+ * now signalled ONLY by the agent-status ring (`public/agent-ring.js`), never by node size.
  */
 export interface SizeConfig {
+  epic: number;
+  bug: number;
+  story: number;
   base: number;
-  active: number;
 }
 
 /**
@@ -33,17 +37,27 @@ function readPositiveEnvNumber(name: string, defaultValue: number): number {
 }
 
 /**
- * SEER_SIZE_BASE / SEER_SIZE_ACTIVE, defaulting to 1.5 / 2 (FACTORY-900 item 6, latest revision —
- * supersedes FACTORY-890's original 2 / 8, and this ticket's own earlier 2/4 and 1.5/3 notes).
- * Decimal values > 0 are valid (`readPositiveEnvNumber` only rejects non-numeric, NaN, zero, and
- * negative); these are settings, not constants — the director has tweaked them repeatedly. With
- * active only ~1.33x base, the shape size barely signals "live agent" any more — the
- * agent-status ring (public/agent-ring.js) is now what carries that, per the director's own note.
+ * SEER_SIZE_EPIC / SEER_SIZE_BUG / SEER_SIZE_STORY / SEER_SIZE_BASE, defaulting to 3 / 3 / 2 / 1.5
+ * (FACTORY-913, Brooswit HIGHEST): REPLACES FACTORY-890/900's single `SEER_SIZE_BASE`/
+ * `SEER_SIZE_ACTIVE` pair — live agents are shown by the agent-status ring
+ * (`public/agent-ring.js`) alone now, never by a node-size bump. Decimal values > 0 are valid
+ * (`readPositiveEnvNumber` only rejects non-numeric, NaN, zero, and negative); these are
+ * settings, not constants — the director has tweaked the size scheme repeatedly.
+ *
+ * `SEER_SIZE_ACTIVE` is no longer read. If it is still set in the environment (e.g. a deploy that
+ * has not dropped it yet), log one startup warning instead of failing — the env var is simply
+ * ignored. `loadSizeConfig()` itself runs once at server startup (`src/cli.ts`), so one warning
+ * per call is already "one startup warning"; no extra latch needed to de-dupe within a process.
  */
 export function loadSizeConfig(): SizeConfig {
+  if (process.env.SEER_SIZE_ACTIVE !== undefined && process.env.SEER_SIZE_ACTIVE !== "") {
+    console.warn("SEER_SIZE_ACTIVE is no longer used");
+  }
   return {
+    epic: readPositiveEnvNumber("SEER_SIZE_EPIC", 3),
+    bug: readPositiveEnvNumber("SEER_SIZE_BUG", 3),
+    story: readPositiveEnvNumber("SEER_SIZE_STORY", 2),
     base: readPositiveEnvNumber("SEER_SIZE_BASE", 1.5),
-    active: readPositiveEnvNumber("SEER_SIZE_ACTIVE", 2),
   };
 }
 

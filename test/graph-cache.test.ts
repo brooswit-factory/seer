@@ -364,8 +364,10 @@ describe("GraphCache", () => {
 
     const result = await cache.getGraph();
 
+    expect(result.sizeEpic).toBe(3);
+    expect(result.sizeBug).toBe(3);
+    expect(result.sizeStory).toBe(2);
     expect(result.sizeBase).toBe(1.5);
-    expect(result.sizeActive).toBe(2);
     expect(result.linkDistance).toBe(40);
     expect(result.charge).toBe(120);
     expect(result.gravity).toBe(0.08);
@@ -379,14 +381,16 @@ describe("GraphCache", () => {
       refreshSeconds: 30,
       fixtureGraph: FIXTURE,
       sanitizeError: (e) => String(e),
-      sizeConfig: { base: 3, active: 11 },
+      sizeConfig: { epic: 5, bug: 4, story: 3, base: 1.75 },
       layoutConfig: { linkDistance: 25, charge: 90, gravity: 0.2 },
     });
 
     const result = await cache.getGraph();
 
-    expect(result.sizeBase).toBe(3);
-    expect(result.sizeActive).toBe(11);
+    expect(result.sizeEpic).toBe(5);
+    expect(result.sizeBug).toBe(4);
+    expect(result.sizeStory).toBe(3);
+    expect(result.sizeBase).toBe(1.75);
     expect(result.linkDistance).toBe(25);
     expect(result.charge).toBe(90);
     expect(result.gravity).toBe(0.2);

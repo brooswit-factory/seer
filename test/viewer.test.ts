@@ -56,3 +56,24 @@ describe("viewer: no per-user grouping", () => {
     expect(appJs).not.toMatch(/discovery-dot[\s\S]{0,120}scaledSizeForNode/);
   });
 });
+
+describe("viewer: per-type node size (FACTORY-913)", () => {
+  test("no live-agent size branch is left in app.js or node-scale.js", () => {
+    const appJs = readViewerFile("app.js");
+    const nodeScaleJs = readViewerFile("node-scale.js");
+    expect(appJs).not.toMatch(/SEER_SIZE_ACTIVE/);
+    expect(appJs).not.toMatch(/isLiveAgentNode/);
+    expect(nodeScaleJs).not.toMatch(/isLiveAgentNode/);
+    expect(nodeScaleJs).not.toMatch(/LIVE_AGENT_STATUSES/);
+    expect(nodeScaleJs).not.toMatch(/\bactive\b/);
+  });
+
+  test("the size legend reads sizeEpic/sizeBug/sizeStory/sizeBase from the graph meta, never a hardcoded multiplier", () => {
+    const appJs = readViewerFile("app.js");
+    expect(appJs).toMatch(/renderSizeLegend/);
+    expect(appJs).toMatch(/graph\.sizeEpic/);
+    expect(appJs).toMatch(/graph\.sizeBug/);
+    expect(appJs).toMatch(/graph\.sizeStory/);
+    expect(appJs).toMatch(/graph\.sizeBase/);
+  });
+});

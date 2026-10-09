@@ -33,19 +33,28 @@ function currentTheme() {
 }
 
 /**
- * Fallbacks for the FACTORY-890 size/layout constants, used ONLY when `/graph.json` predates them
- * (an old fixture, or a snapshot that bypassed `GraphCache`) — the live server always echoes its
- * real `SEER_SIZE_BASE`/`SEER_SIZE_ACTIVE`/`SEER_LINK_DISTANCE`/`SEER_CHARGE`/`SEER_GRAVITY`
- * (env-sourced, see `src/config/env.ts`) on every response, so these values are never the
- * authoritative source in normal operation.
+ * Fallbacks for the FACTORY-890/913 size/layout constants, used ONLY when `/graph.json` predates
+ * them (an old fixture, or a snapshot that bypassed `GraphCache`) — the live server always echoes
+ * its real `SEER_SIZE_EPIC`/`SEER_SIZE_BUG`/`SEER_SIZE_STORY`/`SEER_SIZE_BASE`/
+ * `SEER_LINK_DISTANCE`/`SEER_CHARGE`/`SEER_GRAVITY` (env-sourced, see `src/config/env.ts`) on
+ * every response, so these values are never the authoritative source in normal operation.
+ *
+ * DECISION (FACTORY-913): kept as literal fallbacks matching `loadSizeConfig()`'s own defaults,
+ * same pattern the pre-existing layout fallback already used — not a "derive from meta only, or
+ * fail visibly" scheme, since that would turn a merely-stale `/graph.json` (the committed
+ * fixture, or a snapshot taken before this change) into a broken or blank viewer instead of a
+ * same-as-before one. The live path never reads these; only `test/fixtures` or a pre-FACTORY-913
+ * snapshot would.
  */
-const FALLBACK_SIZE_CONFIG = { base: 1.5, active: 2 };
+const FALLBACK_SIZE_CONFIG = { epic: 3, bug: 3, story: 2, base: 1.5 };
 const FALLBACK_LAYOUT_CONFIG = { linkDistance: 40, charge: 120, gravity: 0.08 };
 
 function sizeConfigFromGraph(graph) {
   return {
+    epic: graph.sizeEpic ?? FALLBACK_SIZE_CONFIG.epic,
+    bug: graph.sizeBug ?? FALLBACK_SIZE_CONFIG.bug,
+    story: graph.sizeStory ?? FALLBACK_SIZE_CONFIG.story,
     base: graph.sizeBase ?? FALLBACK_SIZE_CONFIG.base,
-    active: graph.sizeActive ?? FALLBACK_SIZE_CONFIG.active,
   };
 }
 
@@ -245,14 +254,16 @@ function renderRingLegend() {
   el.innerHTML = rows.join("");
 }
 
-/** Size legend (FACTORY-890): shows the server's actual SEER_SIZE_BASE/SEER_SIZE_ACTIVE, never hardcoded. */
+/** Size legend (FACTORY-913): shows the server's actual SEER_SIZE_EPIC/BUG/STORY/BASE, never hardcoded. */
 function renderSizeLegend(graph) {
   const el = document.getElementById("size-legend");
-  const { base, active } = sizeConfigFromGraph(graph);
+  const { epic, bug, story, base } = sizeConfigFromGraph(graph);
   el.innerHTML = [
     "<h2>Node size</h2>",
-    `<div class="legend-row"><span>${base}x — base size (every node)</span></div>`,
-    `<div class="legend-row"><span>${active}x — live agent (working, blocked, idle, or stalled; replaces the base multiplier, not stacked)</span></div>`,
+    `<div class="legend-row">${shapeIconSvg(SHAPE_HEXAGON)}<span>${epic}x — Epic</span></div>`,
+    `<div class="legend-row">${shapeIconSvg("triangle")}<span>${bug}x — Bug</span></div>`,
+    `<div class="legend-row">${shapeIconSvg("square")}<span>${story}x — Story</span></div>`,
+    `<div class="legend-row"><span>${base}x — base size (Task, Sub-task, other/unknown Jira type, non-Jira)</span></div>`,
   ].join("");
 }
 
@@ -577,10 +588,11 @@ function renderGraph(initialGraph) {
     }
 
     // FACTORY-897: re-fit on every apply(), not just when the simulation reheats and later fires
-    // "end". A status-only refresh (no nodes/links added/removed) never reheats the simulation,
-    // but a status flip can still change a node's drawn size (base -> active), so without this a node
-    // can grow past the already-fitted viewport and stay there until the user clicks Fit. fit()
-    // self-guards on userTransformed, so this never overrides a user's own pan/zoom.
+    // "end". A refresh with no nodes/links added/removed never reheats the simulation, but a
+    // node's resourceType (and so its scaled size, FACTORY-913) can still change underneath it,
+    // so without this a node can grow past the already-fitted viewport and stay there until the
+    // user clicks Fit. fit() self-guards on userTransformed, so this never overrides a user's own
+    // pan/zoom.
     fit();
   }
 
