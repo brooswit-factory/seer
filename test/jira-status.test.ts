@@ -20,11 +20,14 @@ import { STATUS_COLORS, CANNOT_REPORT_COLOR } from "../public/colors.js";
 
 // FACTORY-944/FACTORY-943: the Jira border palette is recoloured to To Do = black, Backlog =
 // grey, In Progress = green, In Review = yellow, Done = blue, replacing FACTORY-939's
-// Okabe-Ito-derived blue/muted-blue/vermillion/purple/teal-green set. The stroke-contrast floor
-// itself (FACTORY-939: >= 4.5:1 against that theme's canvas, tighter than FACTORY-900's >= 3:1
-// fill floor) is UNCHANGED — kept here, not loosened — EXCEPT for dark-theme "To Do", which
-// FACTORY-944's own requirement 2 explicitly scopes the floor to "blue/green/yellow" tokens only
-// (never black): see the dedicated carve-out test below and public/jira-status.js's header
+// Okabe-Ito-derived blue/muted-blue/vermillion/purple/teal-green set. FACTORY-957 (a director
+// addendum) recolours two of those five again: Done to a dark/navy blue, and In Review to cyan —
+// see public/jira-status.js's header comment for the exact hexes and the contrast/colour-blind
+// numbers behind each choice. The stroke-contrast floor itself (FACTORY-939: >= 4.5:1 against
+// that theme's canvas, tighter than FACTORY-900's >= 3:1 fill floor) is UNCHANGED — kept here,
+// not loosened — EXCEPT for dark-theme "To Do", which FACTORY-944's own requirement 2 explicitly
+// scopes the floor to "blue/green/yellow" tokens only (never black): see the dedicated carve-out
+// test below and public/jira-status.js's header
 // comment for why a near-black token cannot itself clear 4.5:1 against a dark canvas.
 const MIN_BORDER_CONTRAST = 4.5;
 const MIN_COLORBLIND_DISTANCE = 30; // a conservative floor under the worst-case simulated pair across both themes (see FACTORY-900 palette-selection notes, carried over).
@@ -179,21 +182,16 @@ describe("border-vs-fill adjacency (FACTORY-939 item 3, extended by FACTORY-944 
         }
       }
 
-      // FACTORY-944's two deliberately-overlapping-hue pairs, named explicitly (not just covered
-      // incidentally by the loop above) so a future hex change that collapses either one back
-      // together fails here with a pointed message, not just a generic "some pair failed".
+      // FACTORY-944's deliberately-overlapping-hue pair, named explicitly (not just covered
+      // incidentally by the loop above) so a future hex change that collapses it back together
+      // fails here with a pointed message, not just a generic "some pair failed". FACTORY-944
+      // originally had a second such pair (In Review border vs Idle fill, both yellow), but
+      // FACTORY-957 moved In Review to cyan, so that pair is no longer same-hue — it's still
+      // covered structurally by the general loop above, it just no longer warrants its own named
+      // test.
       test("In Progress border (green) vs Working fill (green) stays distinguishable, every vision type", () => {
         const borderHex = borders[JIRA_BORDER_IN_PROGRESS]!;
         const fillHex = AGENT_FILLS.working!;
-        expect(rgbDistance(hexToRgb(borderHex), hexToRgb(fillHex))).toBeGreaterThanOrEqual(MIN_COLORBLIND_DISTANCE);
-        for (const type of COLORBLIND_TYPES) {
-          expect(rgbDistance(simulateColorblind(borderHex, type), simulateColorblind(fillHex, type))).toBeGreaterThanOrEqual(MIN_COLORBLIND_DISTANCE);
-        }
-      });
-
-      test("In Review border (yellow) vs Idle fill (yellow) stays distinguishable, every vision type", () => {
-        const borderHex = borders[JIRA_BORDER_IN_REVIEW]!;
-        const fillHex = AGENT_FILLS.idle!;
         expect(rgbDistance(hexToRgb(borderHex), hexToRgb(fillHex))).toBeGreaterThanOrEqual(MIN_COLORBLIND_DISTANCE);
         for (const type of COLORBLIND_TYPES) {
           expect(rgbDistance(simulateColorblind(borderHex, type), simulateColorblind(fillHex, type))).toBeGreaterThanOrEqual(MIN_COLORBLIND_DISTANCE);

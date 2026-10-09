@@ -28,11 +28,21 @@ describe("viewer: no per-user grouping", () => {
     expect(appJs).toMatch(/STATUS_COLORS/);
   });
 
-  test("the tooltip is unchanged: still shows label, provider, id, status, discovery, link", () => {
+  // FACTORY-957 split `showTooltip`'s content-building out into `public/node-info.js`'s
+  // `nodeInfoHtml` (see test/node-info.test.ts for full field/ordering coverage) so the hover
+  // tooltip and the new right-panel node-info view share ONE builder — `showTooltip` itself now
+  // only positions the cursor, so the literal `<dt>...</dt>` fields live in node-info.js, not
+  // here. This test's shape changes accordingly: app.js must still call `showTooltip` (and now
+  // `nodeInfoHtml`, never a second inline HTML builder), while node-info.js is what's checked for
+  // the actual tooltip content/fields.
+  test("the tooltip is unchanged: still shows label, provider, id, status, discovery, link — via the shared nodeInfoHtml builder, not inlined in app.js", () => {
     const appJs = readViewerFile("app.js");
+    const nodeInfoJs = readViewerFile("node-info.js");
     expect(appJs).toMatch(/showTooltip/);
+    expect(appJs).toMatch(/nodeInfoHtml/);
     for (const field of ["label", "provider", "id", "status", "discovery", "link"]) {
-      expect(appJs).toContain(`<dt>${field}</dt>`);
+      expect(appJs).not.toContain(`<dt>${field}</dt>`);
+      expect(nodeInfoJs).toContain(`<dt>${field}</dt>`);
     }
   });
 

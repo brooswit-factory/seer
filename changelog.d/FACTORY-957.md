@@ -1,0 +1,10 @@
+bump: minor
+
+### Added
+- Left node-list sidebar: every node in the graph, shape icon + fill (agent status) / border (Jira status) swatches + key + label, ordered by type (Epic, Story, Task, Bug, others, projects) then key, with a text filter box and arrow-key + Enter keyboard navigation (`public/sidebar-list.js`).
+- Click-to-select: clicking a graph node OR a sidebar row selects it; the matching graph node gets a dashed selection halo and (for a list-originated selection) the view pans to it without disturbing the user's own zoom level or overriding their prior pan/zoom state. Clicking empty canvas, or the panel's close control, deselects.
+- Right panel (`aside#sidebar`) now toggles between the legend/queries view (default) and a selected node's info, reusing the exact same content-builder the hover tooltip already used (`public/node-info.js`'s `nodeInfoHtml`, extracted from the old inline `showTooltip`) — never a second, copy-pasted HTML builder.
+- A pure, DOM-free selection-state reducer (`public/selection.js`): select/deselect/reconcile, fully unit-tested headless. Selection persists across a live refresh by node id and clears automatically if the selected node disappears.
+
+### Changed
+- Jira-status border palette (`public/jira-status.js`): Done moves from FACTORY-944's plain blue to a dark/navy blue (light `#1e3a8a`, 9.16:1 contrast; dark `#6a8df5`, 5.27:1 — a mid blue chosen to clear the 4.5:1 floor outright rather than forking the dark-theme "To Do" hairline device onto a second cell). In Review moves from FACTORY-944's yellow to cyan (light `#377488`, 4.62:1; dark `#67e8f9`, 11.31:1) — both director addenda. Both new tokens were found by brute-force search over the existing >=30 colour-blind-distance floor against every other border colour and every agent-fill colour, not picked by eye; see `public/jira-status.js`'s header comment and `test/jira-status.test.ts` for the exact numbers. The In-Review-vs-Idle "yellow-on-yellow" named test is removed (no longer a same-hue pair); the general border-vs-fill adjacency loop still covers it structurally.

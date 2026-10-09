@@ -89,7 +89,7 @@ export const BORDER_WIDTH = 3.5; // within the ticket's 3-4px band.
 /**
  * Width (px) of the canvas-coloured gap FACTORY-944 item 3 requires between a node's fill and its
  * Jira-status border, so an outline never visually merges with a same-hue fill underneath it
- * (In Progress green on Working green, In Review yellow on Idle yellow) — within the ticket's
+ * (In Progress green on Working green) — within the ticket's
  * 1-2px band. Achieved not by painting an extra ring, but by drawing the FILL shape smaller than
  * the border's own path (see `fillInsetForNode`): the canvas naturally shows through the
  * resulting annulus, so there is nothing to keep in sync if the border width ever changes.

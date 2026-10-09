@@ -52,9 +52,12 @@ body {
   font: 14px/1.4 -apple-system, "Segoe UI", sans-serif;
 }
 
+/* Left node-list | graph | right legend/node-info panel (FACTORY-957 item 5). Below
+   RESPONSIVE_BREAKPOINT the three columns stack into rows instead, each sized by content/flex
+   rather than a fixed viewport fraction, so the layout stays usable on a narrow/mobile viewport. */
 #app {
   display: grid;
-  grid-template-columns: 1fr 320px;
+  grid-template-columns: 220px 1fr 320px;
   grid-template-rows: auto 1fr;
   height: 100vh;
 }
@@ -66,6 +69,13 @@ header {
   display: flex;
   align-items: baseline;
   gap: 12px;
+}
+
+@media (max-width: 860px) {
+  #app {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(120px, 160px) minmax(240px, 1fr) minmax(120px, 220px);
+  }
 }
 
 header h1 {
@@ -131,6 +141,132 @@ header .timestamp.stale {
   letter-spacing: 0.04em;
   color: var(--muted);
   margin: 0 0 8px;
+}
+
+/* Left node-list sidebar (FACTORY-957 item 1). */
+#node-list-sidebar {
+  grid-row: 2;
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#node-filter {
+  margin: 10px;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+}
+
+#node-list {
+  flex: 1;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0 6px 10px;
+  list-style: none;
+}
+
+#node-list:focus-visible {
+  outline: 2px solid var(--muted);
+  outline-offset: -2px;
+}
+
+.node-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.node-row:hover {
+  background: var(--border);
+}
+
+.node-row[aria-selected="true"] {
+  background: var(--border);
+  outline: 1.5px solid var(--node-stroke);
+}
+
+.node-row .node-row-key {
+  font-family: ui-monospace, monospace;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.node-row .node-row-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.node-row .swatch,
+.node-row .border-swatch {
+  width: 11px;
+  height: 11px;
+}
+
+.node-list-empty {
+  padding: 8px 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Right panel: legend (default) <-> selected node's info (FACTORY-957 item 3). */
+.node-info-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.node-info-header h2 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin: 0;
+}
+
+#node-info-close {
+  font: inherit;
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+}
+
+#node-info-close:hover {
+  background: var(--border);
+}
+
+#node-info-content dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 8px;
+  font-size: 12px;
+}
+
+#node-info-content dt {
+  color: var(--muted);
+}
+
+#node-info-content a {
+  color: #1e66f5;
+  word-break: break-all;
 }
 
 .legend-row {
@@ -266,4 +402,16 @@ header .timestamp.stale {
   stroke: var(--warn);
   stroke-width: 2;
   stroke-dasharray: 2 2;
+}
+
+/* Selection halo (FACTORY-957 item 4): a dashed ring, same gap convention as `.admission-ring`
+   but keyed off `--fg` (theme-neutral) rather than `--warn`, so it never reads as the admission
+   warning. Always on top (inserted last, see app.js), never a fill — the node's own fill/border
+   colours are never touched by selection. */
+.selection-halo {
+  fill: none;
+  stroke: var(--fg);
+  stroke-width: 2;
+  stroke-dasharray: 4 3;
+  pointer-events: none;
 }
