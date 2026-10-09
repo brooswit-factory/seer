@@ -151,4 +151,42 @@ describe("GraphCache", () => {
 
     expect(body).not.toContain(SECRET);
   });
+
+  test("size/layout config: defaults are echoed when the caller omits sizeConfig/layoutConfig", async () => {
+    const cache = new GraphCache({
+      collect: async () => graph(),
+      refreshSeconds: 30,
+      fixtureGraph: FIXTURE,
+      sanitizeError: (e) => String(e),
+    });
+
+    const result = await cache.getGraph();
+
+    expect(result.sizeBase).toBe(2);
+    expect(result.sizeActive).toBe(8);
+    expect(result.linkDistance).toBe(40);
+    expect(result.charge).toBe(120);
+    expect(result.gravity).toBe(0.08);
+  });
+
+  test("size/layout config: an explicit sizeConfig/layoutConfig is echoed on every response, fresh or stale", async () => {
+    const cache = new GraphCache({
+      collect: async () => {
+        throw new Error("no credentials");
+      },
+      refreshSeconds: 30,
+      fixtureGraph: FIXTURE,
+      sanitizeError: (e) => String(e),
+      sizeConfig: { base: 3, active: 11 },
+      layoutConfig: { linkDistance: 25, charge: 90, gravity: 0.2 },
+    });
+
+    const result = await cache.getGraph();
+
+    expect(result.sizeBase).toBe(3);
+    expect(result.sizeActive).toBe(11);
+    expect(result.linkDistance).toBe(25);
+    expect(result.charge).toBe(90);
+    expect(result.gravity).toBe(0.2);
+  });
 });
