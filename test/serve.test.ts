@@ -85,7 +85,7 @@ describe("startServer /graph.json", () => {
     resolveCollect(graph({ snapshotTimestamp: "2026-08-01T00:00:00Z" }));
 
     const [res1, res2] = await Promise.all([req1, req2]);
-    const [body1, body2] = await Promise.all([res1.json(), res2.json()]) as Graph[];
+    const [body1, body2] = await Promise.all([res1.json(), res2.json()]) as [Graph, Graph];
 
     expect(res1.ok).toBe(true);
     expect(res2.ok).toBe(true);
