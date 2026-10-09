@@ -1,26 +1,40 @@
 import { describe, expect, test } from "bun:test";
 import { CANNOT_REPORT_COLOR, STATUS_COLORS, colorForNode, outlineForNode, statusLabel } from "../public/colors.js";
+import { COLORBLIND_TYPES, rgbDistance, simulateColorblind } from "../public/colorblind.js";
 
-// Hexes verified against herdr's own `status_color` (src/client/shell.rs) and its default
-// Catppuccin Mocha `Palette::default()` (src/app/state.rs) in a herdrdev/herdr checkout —
-// see FACTORY-841 DECISIONS comment 31060, item 5, which this table must not silently diverge from.
+// FACTORY-944/FACTORY-943: Brooswit's requested agent-status fill palette, REPLACING the
+// FACTORY-841 herdr-verified table this file used to pin — working/idle are swapped (working is
+// now green, idle is now yellow); blocked/stalled/none are unchanged in both role and hex. See
+// public/colors.js's header comment for the light/dark Catppuccin source tokens.
 const EXPECTED = {
-  working: "#f9e2af",
-  blocked: "#f38ba8",
-  idle: "#a6e3a1",
-  stalled: "#fab387",
-  none: "#6c7086",
+  light: {
+    working: "#40a02b",
+    blocked: "#d20f39",
+    idle: "#ffe63c",
+    stalled: "#fe640b",
+    none: "#9ca0b0",
+  },
+  dark: {
+    working: "#a6e3a1",
+    blocked: "#f38ba8",
+    idle: "#f9e2af",
+    stalled: "#fab387",
+    none: "#6c7086",
+  },
 };
 
 describe("STATUS_COLORS", () => {
-  test("matches the FACTORY-841 decision-5 / herdr-verified palette exactly", () => {
-    // `Object.freeze` in colors.js gives tsc literal-typed properties; widen the comparison
-    // value's type rather than loosen the source module's own typing.
-    expect(STATUS_COLORS).toEqual(EXPECTED as typeof STATUS_COLORS);
+  test.each(["light", "dark"] as const)("matches the FACTORY-944 palette exactly (%s theme)", (theme) => {
+    expect(STATUS_COLORS[theme]).toEqual(EXPECTED[theme] as typeof STATUS_COLORS.light);
   });
 
-  test("the five keys are exactly butchr's agent:* status family", () => {
-    expect(Object.keys(STATUS_COLORS).sort()).toEqual(["blocked", "idle", "none", "stalled", "working"]);
+  test.each(["light", "dark"] as const)("the five keys are exactly butchr's agent:* status family (%s theme)", (theme) => {
+    expect(Object.keys(STATUS_COLORS[theme]).sort()).toEqual(["blocked", "idle", "none", "stalled", "working"]);
+  });
+
+  test("CANNOT_REPORT_COLOR is the same neutral as `none`, in both themes", () => {
+    expect(CANNOT_REPORT_COLOR.light).toBe(STATUS_COLORS.light.none);
+    expect(CANNOT_REPORT_COLOR.dark).toBe(STATUS_COLORS.dark.none);
   });
 });
 
@@ -29,24 +43,26 @@ describe("colorForNode / outlineForNode", () => {
   const cannotReport = { agentStatus: "none" as const, providerCanReportStatus: false };
   const reportsNone = { agentStatus: "none" as const, providerCanReportStatus: true };
 
-  test("a reporting node gets its status colour and a solid outline", () => {
-    expect(colorForNode(working)).toBe(STATUS_COLORS.working);
+  test.each(["light", "dark"] as const)("a reporting node gets its status colour and a solid outline (%s theme)", (theme) => {
+    expect(colorForNode(working, theme)).toBe(STATUS_COLORS[theme].working);
     expect(outlineForNode(working)).toBe("solid");
   });
 
-  test.each(["working", "idle", "blocked", "stalled", "none"] as const)(
-    "colorForNode returns the agent-status colour for every status, reporting provider (%s) — FACTORY-939 item 2/5",
-    (agentStatus) => {
-      const node = { agentStatus, providerCanReportStatus: true };
-      expect(colorForNode(node)).toBe(STATUS_COLORS[agentStatus]);
-      expect(outlineForNode(node)).toBe("solid");
-    },
-  );
+  for (const theme of ["light", "dark"] as const) {
+    test.each(["working", "idle", "blocked", "stalled", "none"] as const)(
+      `colorForNode returns the agent-status colour for every status, reporting provider (%s, ${theme} theme) — FACTORY-939 item 2/5, FACTORY-944 recolour`,
+      (agentStatus) => {
+        const node = { agentStatus, providerCanReportStatus: true };
+        expect(colorForNode(node, theme)).toBe(STATUS_COLORS[theme][agentStatus]);
+        expect(outlineForNode(node)).toBe("solid");
+      },
+    );
+  }
 
-  test("cannot-report and reports-none share the same neutral fill", () => {
-    expect(colorForNode(cannotReport)).toBe(CANNOT_REPORT_COLOR);
-    expect(colorForNode(reportsNone)).toBe(STATUS_COLORS.none);
-    expect(colorForNode(cannotReport)).toBe(colorForNode(reportsNone));
+  test.each(["light", "dark"] as const)("cannot-report and reports-none share the same neutral fill (%s theme)", (theme) => {
+    expect(colorForNode(cannotReport, theme)).toBe(CANNOT_REPORT_COLOR[theme]);
+    expect(colorForNode(reportsNone, theme)).toBe(STATUS_COLORS[theme].none);
+    expect(colorForNode(cannotReport, theme)).toBe(colorForNode(reportsNone, theme));
   });
 
   test("but they are NOT drawn the same way — outline distinguishes them", () => {
@@ -60,3 +76,25 @@ describe("colorForNode / outlineForNode", () => {
     expect(statusLabel(reportsNone)).toBe("none");
   });
 });
+
+// PR #29 review item 2: an earlier light-theme Idle hex read as "orange-ish", close enough to
+// Stalled's orange to raise a colour-blind-safety question explicitly, not just by incidental
+// coverage of some larger pairwise matrix (which would also flag Working/Blocked and
+// Blocked/Stalled — a pre-existing red/green/orange tension in colours this ticket didn't touch
+// at all, out of scope here).
+describe("Idle vs Stalled stay colour-blind-distinguishable (FACTORY-944, PR #29 review item 2)", () => {
+  test.each(["light", "dark"] as const)("%s theme", (theme) => {
+    const idle = hexToRgb(STATUS_COLORS[theme].idle);
+    const stalled = hexToRgb(STATUS_COLORS[theme].stalled);
+    expect(rgbDistance(idle, stalled)).toBeGreaterThan(0);
+    for (const type of COLORBLIND_TYPES) {
+      const distance = rgbDistance(simulateColorblind(STATUS_COLORS[theme].idle, type), simulateColorblind(STATUS_COLORS[theme].stalled, type));
+      expect(distance).toBeGreaterThanOrEqual(30);
+    }
+  });
+});
+
+function hexToRgb(hex: string): [number, number, number] {
+  const normalized = hex.replace(/^#/, "");
+  return [parseInt(normalized.slice(0, 2), 16), parseInt(normalized.slice(2, 4), 16), parseInt(normalized.slice(4, 6), 16)];
+}

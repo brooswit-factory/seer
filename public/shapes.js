@@ -21,7 +21,7 @@
 
 import { isProjectNode, SHAPE_PROJECT, PROJECT_SIZE } from "./project.js";
 import { outlineForNode } from "./colors.js";
-import { jiraBorderForNode } from "./jira-status.js";
+import { jiraBorderForNode, jiraBorderHairlineForNode } from "./jira-status.js";
 
 export const SHAPE_HEXAGON = "hexagon";
 export const SHAPE_SQUARE = "square";
@@ -87,9 +87,43 @@ export function sizeForNode(node) {
 export const BORDER_WIDTH = 3.5; // within the ticket's 3-4px band.
 
 /**
+ * Width (px) of the canvas-coloured gap FACTORY-944 item 3 requires between a node's fill and its
+ * Jira-status border, so an outline never visually merges with a same-hue fill underneath it
+ * (In Progress green on Working green, In Review yellow on Idle yellow) — within the ticket's
+ * 1-2px band. Achieved not by painting an extra ring, but by drawing the FILL shape smaller than
+ * the border's own path (see `fillInsetForNode`): the canvas naturally shows through the
+ * resulting annulus, so there is nothing to keep in sync if the border width ever changes.
+ */
+export const BORDER_GAP_WIDTH = 2;
+
+/**
+ * How much smaller (px, off the approximate radius) a bordered node's FILL shape must be drawn
+ * than the path used for its border stroke, so `BORDER_GAP_WIDTH`px of canvas shows between them
+ * instead of the border stroke straddling the fill's edge (its inner half would otherwise paint
+ * directly over the fill, leaving no gap at all). `BORDER_GAP_WIDTH` plus half the border's own
+ * width: enough that the border stroke's inward-facing half lands entirely outside the shrunk
+ * fill, with exactly `BORDER_GAP_WIDTH`px of untouched canvas left over between the two. Zero for
+ * a project node (FACTORY-911): it draws no border, so its fill is never inset.
+ */
+export function fillInsetForNode(node) {
+  if (isProjectNode(node)) return 0;
+  return BORDER_GAP_WIDTH + BORDER_WIDTH / 2;
+}
+
+/**
  * How to draw a node's Jira-status border. A project node (FACTORY-911) has no Jira workflow
  * status of its own (it's a container, not a ticket) and never draws one — checked first, same
  * as every other project-node opt-out in this file.
+ *
+ * `gapColor`, when non-null (FACTORY-944 item 1: dark-theme "To Do" only — see jira-status.js's
+ * `jiraBorderHairlineForNode`), REPLACES the plain canvas colour that would otherwise show
+ * through the `fillInsetForNode` gap with a light hairline instead: a canvas-coloured gap is
+ * invisible against a near-black border that is ALREADY barely distinguishable from the dark
+ * canvas, so that one cell needs an actually-visible ring there, not just empty space. Every
+ * other border/theme leaves this `null`, meaning "just let the canvas show through" (app.js
+ * fills the gap ring with `var(--bg)` in that case) — the ticket's "either a thin
+ * canvas-coloured gap OR an inner light hairline" offered as alternatives for two different
+ * problems (general adjacency vs. one colour's dark-canvas visibility), not stacked.
  */
 export function borderForNode(node, theme) {
   if (isProjectNode(node)) return { visible: false };
@@ -98,5 +132,19 @@ export function borderForNode(node, theme) {
     stroke: jiraBorderForNode(node, theme),
     width: BORDER_WIDTH,
     dashed: outlineForNode(node) === "dashed",
+    gapColor: jiraBorderHairlineForNode(node, theme),
   };
+}
+
+/**
+ * Whether a node's query-hit dot (FACTORY-900 item 7's fixed-radius dot, app.js's
+ * `DISCOVERY_DOT_RADIUS`) should be drawn. FACTORY-945 (Brooswit, via FACTORY-943's addendum)
+ * FLIPPED this from marking a link-discovered node to marking a direct query hit — "dots on
+ * those that the query hits, no dots on the others" — so it is true only for
+ * `discovery === "query"`, never for `"link"` and never for a synthesised project node
+ * (FACTORY-911), regardless of that node's own `discovery` value.
+ */
+export function shouldShowDiscoveryDot(node) {
+  if (isProjectNode(node)) return false;
+  return node?.discovery === "query";
 }
