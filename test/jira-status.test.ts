@@ -184,14 +184,26 @@ describe("border-vs-fill adjacency (FACTORY-939 item 3, extended by FACTORY-944 
 
       // FACTORY-944's deliberately-overlapping-hue pair, named explicitly (not just covered
       // incidentally by the loop above) so a future hex change that collapses it back together
-      // fails here with a pointed message, not just a generic "some pair failed". FACTORY-944
-      // originally had a second such pair (In Review border vs Idle fill, both yellow), but
-      // FACTORY-957 moved In Review to cyan, so that pair is no longer same-hue — it's still
-      // covered structurally by the general loop above, it just no longer warrants its own named
-      // test.
+      // fails here with a pointed message, not just a generic "some pair failed".
       test("In Progress border (green) vs Working fill (green) stays distinguishable, every vision type", () => {
         const borderHex = borders[JIRA_BORDER_IN_PROGRESS]!;
         const fillHex = AGENT_FILLS.working!;
+        expect(rgbDistance(hexToRgb(borderHex), hexToRgb(fillHex))).toBeGreaterThanOrEqual(MIN_COLORBLIND_DISTANCE);
+        for (const type of COLORBLIND_TYPES) {
+          expect(rgbDistance(simulateColorblind(borderHex, type), simulateColorblind(fillHex, type))).toBeGreaterThanOrEqual(MIN_COLORBLIND_DISTANCE);
+        }
+      });
+
+      // FACTORY-944 originally had a second overlapping-hue pair here too (In Review border vs
+      // Idle fill, both yellow); FACTORY-957 moved In Review to cyan, breaking that pairing, then
+      // FACTORY-963/FACTORY-965 moved Idle itself to cyan, re-forming it as cyan-on-cyan — the
+      // real risk this repo's own colour-selection comments call out (see public/colors.js and
+      // public/jira-status.js header comments). Named explicitly, same treatment as the
+      // green-on-green pair above, so a future hex change that collapses it back together fails
+      // here with a pointed message.
+      test("Idle fill (cyan) vs In Review border (cyan) stays distinguishable, every vision type", () => {
+        const borderHex = borders[JIRA_BORDER_IN_REVIEW]!;
+        const fillHex = AGENT_FILLS.idle!;
         expect(rgbDistance(hexToRgb(borderHex), hexToRgb(fillHex))).toBeGreaterThanOrEqual(MIN_COLORBLIND_DISTANCE);
         for (const type of COLORBLIND_TYPES) {
           expect(rgbDistance(simulateColorblind(borderHex, type), simulateColorblind(fillHex, type))).toBeGreaterThanOrEqual(MIN_COLORBLIND_DISTANCE);
