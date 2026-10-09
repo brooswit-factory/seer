@@ -45,9 +45,12 @@
 // that pair uses a visibly different shade of the same hue family, verified >= 30 apart
 // (public/colorblind.js's distance floor) under every simulated dichromacy type, not just normal
 // vision — see test/jira-status.test.ts. FACTORY-944's original yellow-on-yellow pair (In Review
-// border vs Idle fill) no longer applies as a same-hue case now that FACTORY-957 moved In Review
-// to cyan — the general border-vs-every-agent-fill loop in test/jira-status.test.ts still covers
-// that pair structurally, it just no longer needs (or has) a dedicated same-hue-named test.
+// border vs Idle fill) stopped being a same-hue case when FACTORY-957 moved In Review to cyan —
+// but FACTORY-963/FACTORY-965 then moved Idle itself to cyan, so the pair is cyan-on-cyan again,
+// now the real risk this module's own header comment calls out above. The general
+// border-vs-every-agent-fill loop in test/jira-status.test.ts covers it structurally either way;
+// it also has its own dedicated named test ("Idle fill (cyan) vs In Review border (cyan)"), the
+// same treatment given the green-on-green pair.
 import { isProjectNode, projectFill } from "./project.js";
 
 export const JIRA_BORDER_TODO = "todo";

@@ -141,8 +141,9 @@ colour-blind-safe. The mapping (`public/shapes.js`):
 **Fill is the node's agent status** (`public/colors.js`, recoloured by
 FACTORY-944/FACTORY-943 — reverted from FACTORY-900's inversion back in
 FACTORY-939, then Brooswit's own requested palette replaced the FACTORY-841
-herdr-verified table): Working = green, Blocked = red, Idle = yellow,
-Stalled = orange, `none` = neutral grey — defined per light/dark theme. A
+herdr-verified table, then FACTORY-963/FACTORY-965 swapped Idle and Stalled
+again): Working = green, Blocked = red, Idle = cyan, Stalled = yellow,
+`none` = neutral grey — defined per light/dark theme. A
 provider that cannot report status at all shares that same neutral but draws
 a dashed border instead of a solid one (see below) — "cannot report" and
 "reports none" read the same colour, distinguished only by that dash, never
@@ -247,9 +248,10 @@ comments.)
   username) instead.
 
 The node-colour table is implemented in `public/colors.js` as light/dark
-theme tokens: Working = green, Blocked = red, Idle = yellow, Stalled =
-orange, `none` = neutral grey (FACTORY-944, Brooswit's requested palette,
-superseding the FACTORY-841 herdr-verified table this file used to mirror).
+theme tokens: Working = green, Blocked = red, Idle = cyan, Stalled =
+yellow, `none` = neutral grey (FACTORY-944, Brooswit's requested palette,
+superseding the FACTORY-841 herdr-verified table this file used to mirror;
+Idle and Stalled were swapped again by FACTORY-963/FACTORY-965).
 
 ## The schemas
 
