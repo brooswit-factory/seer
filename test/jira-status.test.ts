@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   JIRA_BORDER_BACKLOG,
+  JIRA_BORDER_DARK_HAIRLINE,
   JIRA_BORDER_DONE,
   JIRA_BORDER_IN_PROGRESS,
   JIRA_BORDER_IN_REVIEW,
@@ -8,6 +9,7 @@ import {
   JIRA_BORDER_TODO,
   JIRA_STATUS_BORDERS,
   jiraBorderForNode,
+  jiraBorderHairlineForNode,
   jiraBorderKeyForNode,
   jiraStatusLabel,
 } from "../public/jira-status.js";
@@ -16,9 +18,14 @@ import { COLORBLIND_TYPES, rgbDistance, simulateColorblind } from "../public/col
 import { PROJECT_FILL } from "../public/project.js";
 import { STATUS_COLORS, CANNOT_REPORT_COLOR } from "../public/colors.js";
 
-// FACTORY-939: the Jira palette is a thin 3-4px STROKE now (border), not a filled area, so it
-// holds the same >= 4.5:1 stroke-contrast floor `--node-stroke`/`--edge`/`--arrowhead` already do
-// — tighter than FACTORY-900's >= 3:1 fill floor.
+// FACTORY-944/FACTORY-943: the Jira border palette is recoloured to To Do = black, Backlog =
+// grey, In Progress = green, In Review = yellow, Done = blue, replacing FACTORY-939's
+// Okabe-Ito-derived blue/muted-blue/vermillion/purple/teal-green set. The stroke-contrast floor
+// itself (FACTORY-939: >= 4.5:1 against that theme's canvas, tighter than FACTORY-900's >= 3:1
+// fill floor) is UNCHANGED — kept here, not loosened — EXCEPT for dark-theme "To Do", which
+// FACTORY-944's own requirement 2 explicitly scopes the floor to "blue/green/yellow" tokens only
+// (never black): see the dedicated carve-out test below and public/jira-status.js's header
+// comment for why a near-black token cannot itself clear 4.5:1 against a dark canvas.
 const MIN_BORDER_CONTRAST = 4.5;
 const MIN_COLORBLIND_DISTANCE = 30; // a conservative floor under the worst-case simulated pair across both themes (see FACTORY-900 palette-selection notes, carried over).
 
@@ -72,11 +79,45 @@ describe("jiraBorderForNode / jiraStatusLabel", () => {
   });
 });
 
-describe("Jira-status border palette: contrast against the canvas (WCAG >= 4.5:1, both themes — FACTORY-939's stroke floor)", () => {
+describe("jiraBorderHairlineForNode (FACTORY-944 item 1): dark-theme 'To Do' only", () => {
+  const todoNode = { jiraStatus: { name: "To Do", category: "new" } };
+  const doneNode = { jiraStatus: { name: "Done", category: "done" } };
+  const projectNode = { provider: "jira-project", resourceType: "project" };
+
+  test("dark-theme To Do gets the hairline colour", () => {
+    expect(jiraBorderHairlineForNode(todoNode, "dark")).toBe(JIRA_BORDER_DARK_HAIRLINE);
+  });
+
+  test("light-theme To Do gets no hairline — the contrast floor already covers it there", () => {
+    expect(jiraBorderHairlineForNode(todoNode, "light")).toBeNull();
+  });
+
+  test("every other dark-theme status gets no hairline", () => {
+    expect(jiraBorderHairlineForNode(doneNode, "dark")).toBeNull();
+  });
+
+  test("a project node never gets a hairline, even in dark theme", () => {
+    expect(jiraBorderHairlineForNode(projectNode, "dark")).toBeNull();
+  });
+});
+
+describe("Jira-status border palette: contrast against the canvas (WCAG >= 4.5:1, both themes — FACTORY-939's stroke floor, kept by FACTORY-944)", () => {
   for (const [themeName, borders] of Object.entries(JIRA_STATUS_BORDERS)) {
     const bg = THEME_TOKENS[themeName as "light" | "dark"].bg;
     describe(`${themeName} theme`, () => {
       for (const [key, hex] of Object.entries(borders)) {
+        // Deliberate carve-out (FACTORY-944 requirement 2 scopes the floor to blue/green/yellow
+        // tokens only): dark-theme "To Do" is a near-black token that by construction cannot
+        // clear 4.5:1 against the dark canvas — it relies on jiraBorderHairlineForNode's hairline
+        // instead. Every other cell, including light-theme "To Do" (black reads fine on the light
+        // canvas), still holds the floor.
+        if (themeName === "dark" && key === JIRA_BORDER_TODO) {
+          test(`${key} (${hex}) is exempt from the contrast floor by design — relies on the hairline instead`, () => {
+            expect(contrastRatio(hex, bg)).toBeLessThan(MIN_BORDER_CONTRAST);
+            expect(contrastRatio(JIRA_BORDER_DARK_HAIRLINE, bg)).toBeGreaterThanOrEqual(MIN_BORDER_CONTRAST);
+          });
+          continue;
+        }
         test(`${key} (${hex}) vs background (${bg})`, () => {
           expect(contrastRatio(hex, bg)).toBeGreaterThanOrEqual(MIN_BORDER_CONTRAST);
         });
@@ -119,11 +160,12 @@ describe("Jira-status border palette: colour-blind-safe pairwise distance (prota
   }
 });
 
-describe("border-vs-fill adjacency (FACTORY-939 item 3): the Jira border must stay colour-blind-distinguishable from every agent-fill colour it can sit directly against", () => {
-  const AGENT_FILLS: Record<string, string> = { ...STATUS_COLORS, cannotReport: CANNOT_REPORT_COLOR };
-
+describe("border-vs-fill adjacency (FACTORY-939 item 3, extended by FACTORY-944 for the new green-on-green / yellow-on-yellow pairs): the Jira border must stay colour-blind-distinguishable from every agent-fill colour it can sit directly against", () => {
   for (const [themeName, borderTable] of Object.entries(JIRA_STATUS_BORDERS)) {
     const borders: Record<string, string> = borderTable;
+    const theme = themeName as "light" | "dark";
+    const AGENT_FILLS: Record<string, string> = { ...STATUS_COLORS[theme], cannotReport: CANNOT_REPORT_COLOR[theme] };
+
     describe(`${themeName} theme`, () => {
       for (const [borderKey, borderHex] of Object.entries(borders)) {
         for (const [agentKey, agentHex] of Object.entries(AGENT_FILLS)) {
@@ -136,6 +178,27 @@ describe("border-vs-fill adjacency (FACTORY-939 item 3): the Jira border must st
           });
         }
       }
+
+      // FACTORY-944's two deliberately-overlapping-hue pairs, named explicitly (not just covered
+      // incidentally by the loop above) so a future hex change that collapses either one back
+      // together fails here with a pointed message, not just a generic "some pair failed".
+      test("In Progress border (green) vs Working fill (green) stays distinguishable, every vision type", () => {
+        const borderHex = borders[JIRA_BORDER_IN_PROGRESS]!;
+        const fillHex = AGENT_FILLS.working!;
+        expect(rgbDistance(hexToRgb(borderHex), hexToRgb(fillHex))).toBeGreaterThanOrEqual(MIN_COLORBLIND_DISTANCE);
+        for (const type of COLORBLIND_TYPES) {
+          expect(rgbDistance(simulateColorblind(borderHex, type), simulateColorblind(fillHex, type))).toBeGreaterThanOrEqual(MIN_COLORBLIND_DISTANCE);
+        }
+      });
+
+      test("In Review border (yellow) vs Idle fill (yellow) stays distinguishable, every vision type", () => {
+        const borderHex = borders[JIRA_BORDER_IN_REVIEW]!;
+        const fillHex = AGENT_FILLS.idle!;
+        expect(rgbDistance(hexToRgb(borderHex), hexToRgb(fillHex))).toBeGreaterThanOrEqual(MIN_COLORBLIND_DISTANCE);
+        for (const type of COLORBLIND_TYPES) {
+          expect(rgbDistance(simulateColorblind(borderHex, type), simulateColorblind(fillHex, type))).toBeGreaterThanOrEqual(MIN_COLORBLIND_DISTANCE);
+        }
+      });
     });
   }
 });
