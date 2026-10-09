@@ -92,8 +92,8 @@ describe("maxCharsForRadius / truncateToChars", () => {
 
   test.each([
     ["short", 10, "short"],
-    ["exactly at the limit", 5, "exact"],
-    ["needs truncation", 4, "sho…"],
+    ["fiver", 5, "fiver"],
+    ["needs truncation", 4, "nee…"],
     ["", 5, ""],
   ])("truncateToChars(%p, %p) -> %p", (text, maxChars, expected) => {
     expect(truncateToChars(text, maxChars)).toBe(expected);
