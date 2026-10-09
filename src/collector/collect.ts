@@ -129,6 +129,7 @@ export async function collect(config: SeerConfig, providers: Record<string, Prov
     providerCanReportStatus: match.providerCanReportStatus,
     admissionWithheld: match.admissionWithheld,
     discovery,
+    ...(match.resourceType !== undefined ? { resourceType: match.resourceType } : {}),
   }));
 
   return {
