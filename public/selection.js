@@ -35,3 +35,22 @@ export function reconcileSelection(state, presentNodeIds) {
   if (presentNodeIds.has(state.selectedId)) return state;
   return deselect(state);
 }
+
+/**
+ * FACTORY-982 item 1: the selected node's DIRECT neighbours — every other node joined to it by an
+ * edge in EITHER direction. `edges` is the same `{source, target}`-shaped array `app.js` already
+ * builds for d3's `forceLink` (after d3 resolves string ids to node object references in place, a
+ * `source`/`target` can be either shape — this normalizes both, same convention
+ * `epicCountForProject` in app.js already uses). Pure and DOM/D3-free, so the neighbour computation
+ * itself is testable without a force simulation.
+ */
+export function neighboursOf(nodeId, edges) {
+  const ids = new Set();
+  for (const edge of edges) {
+    const sourceId = typeof edge.source === "object" ? edge.source.id : edge.source;
+    const targetId = typeof edge.target === "object" ? edge.target.id : edge.target;
+    if (sourceId === nodeId && targetId !== nodeId) ids.add(targetId);
+    else if (targetId === nodeId && sourceId !== nodeId) ids.add(sourceId);
+  }
+  return ids;
+}
