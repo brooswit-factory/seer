@@ -2,7 +2,7 @@ import { colorForNode, outlineForNode, statusLabel, STATUS_COLORS, CANNOT_REPORT
 import { classifyQueryRecord, queryStatusLabel } from "./query-status.js";
 import { shapeForNode, SHAPE_HEXAGON, SHAPE_ROUNDED_SQUARE } from "./shapes.js";
 import { scaledSizeForNode } from "./node-scale.js";
-import { computeFitTransform } from "./fit-view.js";
+import { computeFitTransform, shouldFit } from "./fit-view.js";
 
 const LABEL_MAX_CHARS = 22;
 const DEFAULT_REFRESH_SECONDS = 30;
@@ -255,7 +255,7 @@ function renderGraph(initialGraph) {
 
   /** Re-fits the view to the current node positions, unless the user has since panned/zoomed by hand. */
   function fit({ force = false } = {}) {
-    if (userTransformed && !force) return;
+    if (!shouldFit({ userTransformed, force })) return;
     const points = nodes.map((d) => ({ x: d.x, y: d.y, r: approxRadiusForNode(d) }));
     const { x, y, k } = computeFitTransform(points, width, height);
     svg
@@ -472,6 +472,13 @@ function renderGraph(initialGraph) {
       // the starting point, so only genuinely new/affected nodes visibly move into place.
       simulation.alpha(Math.max(simulation.alpha(), 0.3)).restart();
     }
+
+    // FACTORY-897: re-fit on every apply(), not just when the simulation reheats and later fires
+    // "end". A status-only refresh (no nodes/links added/removed) never reheats the simulation,
+    // but a status flip can still change a node's drawn size (2x -> 8x), so without this a node
+    // can grow past the already-fitted viewport and stay there until the user clicks Fit. fit()
+    // self-guards on userTransformed, so this never overrides a user's own pan/zoom.
+    fit();
   }
 
   apply(initialGraph);

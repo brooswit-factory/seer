@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { computeFitTransform, MIN_READABLE_SCALE } from "../public/fit-view.js";
+import { computeFitTransform, MIN_READABLE_SCALE, shouldFit } from "../public/fit-view.js";
 
 type Point = { x: number; y: number; r?: number };
 type Transform = { x: number; y: number; k: number };
@@ -59,5 +59,23 @@ describe("computeFitTransform", () => {
     expect(Number.isFinite(t.x)).toBe(true);
     expect(Number.isFinite(t.y)).toBe(true);
     expect(Number.isFinite(t.k)).toBe(true);
+  });
+});
+
+describe("shouldFit (FACTORY-897: re-fit trigger on status-only refresh)", () => {
+  test("a status-only refresh (no user pan/zoom yet) re-fits", () => {
+    expect(shouldFit({ userTransformed: false, force: false })).toBe(true);
+  });
+
+  test("a refresh after the user has panned/zoomed does NOT re-fit", () => {
+    expect(shouldFit({ userTransformed: true, force: false })).toBe(false);
+  });
+
+  test("the Fit button overrides a prior user pan/zoom", () => {
+    expect(shouldFit({ userTransformed: true, force: true })).toBe(true);
+  });
+
+  test("force on an untouched view still fits (no-op either way)", () => {
+    expect(shouldFit({ userTransformed: false, force: true })).toBe(true);
   });
 });

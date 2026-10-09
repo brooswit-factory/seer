@@ -56,3 +56,13 @@ export function computeFitTransform(points, viewportWidth, viewportHeight, optio
     k,
   };
 }
+
+/**
+ * Whether a call to `fit()` should actually move the viewport (FACTORY-897). `force` is the
+ * explicit Fit-button override; otherwise a prior user pan/zoom (`userTransformed`) wins — this
+ * is the same guard `app.js`'s `fit()` applies, pulled out so the trigger (load, status-only
+ * refresh, or user gesture) can be tested without a DOM/d3 simulation.
+ */
+export function shouldFit({ userTransformed, force = false }) {
+  return force || !userTransformed;
+}

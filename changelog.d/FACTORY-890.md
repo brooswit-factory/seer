@@ -6,3 +6,6 @@ bump: minor
 
 ### Changed
 - Force-simulation collision radius now follows each node's own scaled size (a function, not the old fixed `NODE_RADIUS + 4`), so bigger live-agent nodes push their neighbours away proportionally.
+
+### Fixed
+- The "after every refresh" auto fit-to-view claim above didn't hold for a status-only refresh (no node/link added/removed, so the force simulation never reheats and its `"end"` event — the only other place `fit()` was called from — never fires); a node whose status flips still changes its drawn size (2x -> 8x) and could grow past the already-fitted viewport. `apply()` now calls `fit()` unconditionally on every refresh, so this is true for every refresh, not just ones that reheat the simulation (FACTORY-897).
