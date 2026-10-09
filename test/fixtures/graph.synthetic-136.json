@@ -1,0 +1,2126 @@
+{
+  "schemaVersion": 1,
+  "snapshotTimestamp": "2026-10-08T12:00:00Z",
+  "nodes": [
+    {
+      "id": "jira-work:Epic-0",
+      "provider": "jira-work",
+      "label": "Epic 0",
+      "url": "https://example.invalid/jira-work:Epic-0",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Epic"
+    },
+    {
+      "id": "jira-work:Story-1",
+      "provider": "jira-work",
+      "label": "Story 0.0",
+      "url": "https://example.invalid/jira-work:Story-1",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Story"
+    },
+    {
+      "id": "jira-work:Task-2",
+      "provider": "jira-work",
+      "label": "Task 0.0.0",
+      "url": "https://example.invalid/jira-work:Task-2",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "blocked",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Task"
+    },
+    {
+      "id": "jira-work:Bug-3",
+      "provider": "jira-work",
+      "label": "Bug 0.0.1",
+      "url": "https://example.invalid/jira-work:Bug-3",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Bug"
+    },
+    {
+      "id": "jira-work:Story-4",
+      "provider": "jira-work",
+      "label": "Story 0.1",
+      "url": "https://example.invalid/jira-work:Story-4",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Story"
+    },
+    {
+      "id": "jira-work:Sub-task-5",
+      "provider": "jira-work",
+      "label": "Sub-task 0.1.0",
+      "url": "https://example.invalid/jira-work:Sub-task-5",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "working",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Sub-task"
+    },
+    {
+      "id": "jira-work:Task-6",
+      "provider": "jira-work",
+      "label": "Task 0.1.1",
+      "url": "https://example.invalid/jira-work:Task-6",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Task"
+    },
+    {
+      "id": "github:pull-request-7",
+      "provider": "github",
+      "label": "PR for 0.1.1",
+      "url": "https://example.invalid/github:pull-request-7",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": false,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "pull-request"
+    },
+    {
+      "id": "jira-work:Bug-8",
+      "provider": "jira-work",
+      "label": "Bug 0.1.2",
+      "url": "https://example.invalid/jira-work:Bug-8",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "working",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Bug"
+    },
+    {
+      "id": "jira-work:Story-9",
+      "provider": "jira-work",
+      "label": "Story 0.2",
+      "url": "https://example.invalid/jira-work:Story-9",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Story"
+    },
+    {
+      "id": "jira-work:Sub-task-10",
+      "provider": "jira-work",
+      "label": "Sub-task 0.2.0",
+      "url": "https://example.invalid/jira-work:Sub-task-10",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Sub-task"
+    },
+    {
+      "id": "jira-work:Task-11",
+      "provider": "jira-work",
+      "label": "Task 0.2.1",
+      "url": "https://example.invalid/jira-work:Task-11",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "working",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Task"
+    },
+    {
+      "id": "github:pull-request-12",
+      "provider": "github",
+      "label": "PR for 0.2.1",
+      "url": "https://example.invalid/github:pull-request-12",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "blocked",
+      "providerCanReportStatus": false,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "pull-request"
+    },
+    {
+      "id": "jira-work:Story-13",
+      "provider": "jira-work",
+      "label": "Story 0.3",
+      "url": "https://example.invalid/jira-work:Story-13",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Story"
+    },
+    {
+      "id": "jira-work:Bug-14",
+      "provider": "jira-work",
+      "label": "Bug 0.3.0",
+      "url": "https://example.invalid/jira-work:Bug-14",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Bug"
+    },
+    {
+      "id": "github:pull-request-15",
+      "provider": "github",
+      "label": "PR for 0.3.0",
+      "url": "https://example.invalid/github:pull-request-15",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": false,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "pull-request"
+    },
+    {
+      "id": "jira-work:Sub-task-16",
+      "provider": "jira-work",
+      "label": "Sub-task 0.3.1",
+      "url": "https://example.invalid/jira-work:Sub-task-16",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "blocked",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Sub-task"
+    },
+    {
+      "id": "github:pull-request-17",
+      "provider": "github",
+      "label": "PR for 0.3.1",
+      "url": "https://example.invalid/github:pull-request-17",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "pull-request"
+    },
+    {
+      "id": "jira-work:Sub-task-18",
+      "provider": "jira-work",
+      "label": "Sub-task 0.3.2",
+      "url": "https://example.invalid/jira-work:Sub-task-18",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Sub-task"
+    },
+    {
+      "id": "jira-work:Task-19",
+      "provider": "jira-work",
+      "label": "Task 0.3.3",
+      "url": "https://example.invalid/jira-work:Task-19",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "working",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Task"
+    },
+    {
+      "id": "jira-work:Task-20",
+      "provider": "jira-work",
+      "label": "Task 0.3.4",
+      "url": "https://example.invalid/jira-work:Task-20",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Task"
+    },
+    {
+      "id": "jira-work:Epic-21",
+      "provider": "jira-work",
+      "label": "Epic 1",
+      "url": "https://example.invalid/jira-work:Epic-21",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Epic"
+    },
+    {
+      "id": "jira-work:Story-22",
+      "provider": "jira-work",
+      "label": "Story 1.0",
+      "url": "https://example.invalid/jira-work:Story-22",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Story"
+    },
+    {
+      "id": "jira-work:Sub-task-23",
+      "provider": "jira-work",
+      "label": "Sub-task 1.0.0",
+      "url": "https://example.invalid/jira-work:Sub-task-23",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Sub-task"
+    },
+    {
+      "id": "jira-work:Bug-24",
+      "provider": "jira-work",
+      "label": "Bug 1.0.1",
+      "url": "https://example.invalid/jira-work:Bug-24",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "idle",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Bug"
+    },
+    {
+      "id": "jira-work:Task-25",
+      "provider": "jira-work",
+      "label": "Task 1.0.2",
+      "url": "https://example.invalid/jira-work:Task-25",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Task"
+    },
+    {
+      "id": "jira-work:Task-26",
+      "provider": "jira-work",
+      "label": "Task 1.0.3",
+      "url": "https://example.invalid/jira-work:Task-26",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Task"
+    },
+    {
+      "id": "jira-work:Bug-27",
+      "provider": "jira-work",
+      "label": "Bug 1.0.4",
+      "url": "https://example.invalid/jira-work:Bug-27",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Bug"
+    },
+    {
+      "id": "jira-work:Story-28",
+      "provider": "jira-work",
+      "label": "Story 1.1",
+      "url": "https://example.invalid/jira-work:Story-28",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Story"
+    },
+    {
+      "id": "jira-work:Sub-task-29",
+      "provider": "jira-work",
+      "label": "Sub-task 1.1.0",
+      "url": "https://example.invalid/jira-work:Sub-task-29",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Sub-task"
+    },
+    {
+      "id": "jira-work:Bug-30",
+      "provider": "jira-work",
+      "label": "Bug 1.1.1",
+      "url": "https://example.invalid/jira-work:Bug-30",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "blocked",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Bug"
+    },
+    {
+      "id": "jira-work:Sub-task-31",
+      "provider": "jira-work",
+      "label": "Sub-task 1.1.2",
+      "url": "https://example.invalid/jira-work:Sub-task-31",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Sub-task"
+    },
+    {
+      "id": "github:pull-request-32",
+      "provider": "github",
+      "label": "PR for 1.1.2",
+      "url": "https://example.invalid/github:pull-request-32",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": false,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "pull-request"
+    },
+    {
+      "id": "jira-work:Task-33",
+      "provider": "jira-work",
+      "label": "Task 1.1.3",
+      "url": "https://example.invalid/jira-work:Task-33",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Task"
+    },
+    {
+      "id": "github:pull-request-34",
+      "provider": "github",
+      "label": "PR for 1.1.3",
+      "url": "https://example.invalid/github:pull-request-34",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": false,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "pull-request"
+    },
+    {
+      "id": "jira-work:Task-35",
+      "provider": "jira-work",
+      "label": "Task 1.1.4",
+      "url": "https://example.invalid/jira-work:Task-35",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "blocked",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Task"
+    },
+    {
+      "id": "github:pull-request-36",
+      "provider": "github",
+      "label": "PR for 1.1.4",
+      "url": "https://example.invalid/github:pull-request-36",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "blocked",
+      "providerCanReportStatus": false,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "pull-request"
+    },
+    {
+      "id": "jira-work:Epic-37",
+      "provider": "jira-work",
+      "label": "Epic 2",
+      "url": "https://example.invalid/jira-work:Epic-37",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Epic"
+    },
+    {
+      "id": "jira-work:Story-38",
+      "provider": "jira-work",
+      "label": "Story 2.0",
+      "url": "https://example.invalid/jira-work:Story-38",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "working",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Story"
+    },
+    {
+      "id": "jira-work:Task-39",
+      "provider": "jira-work",
+      "label": "Task 2.0.0",
+      "url": "https://example.invalid/jira-work:Task-39",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Task"
+    },
+    {
+      "id": "jira-work:Task-40",
+      "provider": "jira-work",
+      "label": "Task 2.0.1",
+      "url": "https://example.invalid/jira-work:Task-40",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Task"
+    },
+    {
+      "id": "jira-work:Task-41",
+      "provider": "jira-work",
+      "label": "Task 2.0.2",
+      "url": "https://example.invalid/jira-work:Task-41",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Task"
+    },
+    {
+      "id": "jira-work:Task-42",
+      "provider": "jira-work",
+      "label": "Task 2.0.3",
+      "url": "https://example.invalid/jira-work:Task-42",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "working",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Task"
+    },
+    {
+      "id": "jira-work:Story-43",
+      "provider": "jira-work",
+      "label": "Story 2.1",
+      "url": "https://example.invalid/jira-work:Story-43",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Story"
+    },
+    {
+      "id": "jira-work:Task-44",
+      "provider": "jira-work",
+      "label": "Task 2.1.0",
+      "url": "https://example.invalid/jira-work:Task-44",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Task"
+    },
+    {
+      "id": "jira-work:Bug-45",
+      "provider": "jira-work",
+      "label": "Bug 2.1.1",
+      "url": "https://example.invalid/jira-work:Bug-45",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Bug"
+    },
+    {
+      "id": "jira-work:Task-46",
+      "provider": "jira-work",
+      "label": "Task 2.1.2",
+      "url": "https://example.invalid/jira-work:Task-46",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Task"
+    },
+    {
+      "id": "github:pull-request-47",
+      "provider": "github",
+      "label": "PR for 2.1.2",
+      "url": "https://example.invalid/github:pull-request-47",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "working",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "pull-request"
+    },
+    {
+      "id": "jira-work:Bug-48",
+      "provider": "jira-work",
+      "label": "Bug 2.1.3",
+      "url": "https://example.invalid/jira-work:Bug-48",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "working",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Bug"
+    },
+    {
+      "id": "github:pull-request-49",
+      "provider": "github",
+      "label": "PR for 2.1.3",
+      "url": "https://example.invalid/github:pull-request-49",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "working",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "pull-request"
+    },
+    {
+      "id": "jira-work:Sub-task-50",
+      "provider": "jira-work",
+      "label": "Sub-task 2.1.4",
+      "url": "https://example.invalid/jira-work:Sub-task-50",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Sub-task"
+    },
+    {
+      "id": "jira-work:Story-51",
+      "provider": "jira-work",
+      "label": "Story 2.2",
+      "url": "https://example.invalid/jira-work:Story-51",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Story"
+    },
+    {
+      "id": "jira-work:Task-52",
+      "provider": "jira-work",
+      "label": "Task 2.2.0",
+      "url": "https://example.invalid/jira-work:Task-52",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "working",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Task"
+    },
+    {
+      "id": "jira-work:Bug-53",
+      "provider": "jira-work",
+      "label": "Bug 2.2.1",
+      "url": "https://example.invalid/jira-work:Bug-53",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "idle",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Bug"
+    },
+    {
+      "id": "jira-work:Task-54",
+      "provider": "jira-work",
+      "label": "Task 2.2.2",
+      "url": "https://example.invalid/jira-work:Task-54",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "blocked",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Task"
+    },
+    {
+      "id": "github:pull-request-55",
+      "provider": "github",
+      "label": "PR for 2.2.2",
+      "url": "https://example.invalid/github:pull-request-55",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": false,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "pull-request"
+    },
+    {
+      "id": "jira-work:Sub-task-56",
+      "provider": "jira-work",
+      "label": "Sub-task 2.2.3",
+      "url": "https://example.invalid/jira-work:Sub-task-56",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "idle",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Sub-task"
+    },
+    {
+      "id": "jira-work:Story-57",
+      "provider": "jira-work",
+      "label": "Story 2.3",
+      "url": "https://example.invalid/jira-work:Story-57",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Story"
+    },
+    {
+      "id": "jira-work:Bug-58",
+      "provider": "jira-work",
+      "label": "Bug 2.3.0",
+      "url": "https://example.invalid/jira-work:Bug-58",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Bug"
+    },
+    {
+      "id": "jira-work:Task-59",
+      "provider": "jira-work",
+      "label": "Task 2.3.1",
+      "url": "https://example.invalid/jira-work:Task-59",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Task"
+    },
+    {
+      "id": "github:pull-request-60",
+      "provider": "github",
+      "label": "PR for 2.3.1",
+      "url": "https://example.invalid/github:pull-request-60",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "pull-request"
+    },
+    {
+      "id": "jira-work:Task-61",
+      "provider": "jira-work",
+      "label": "Task 2.3.2",
+      "url": "https://example.invalid/jira-work:Task-61",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Task"
+    },
+    {
+      "id": "jira-work:Bug-62",
+      "provider": "jira-work",
+      "label": "Bug 2.3.3",
+      "url": "https://example.invalid/jira-work:Bug-62",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Bug"
+    },
+    {
+      "id": "jira-work:Epic-63",
+      "provider": "jira-work",
+      "label": "Epic 3",
+      "url": "https://example.invalid/jira-work:Epic-63",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Epic"
+    },
+    {
+      "id": "jira-work:Story-64",
+      "provider": "jira-work",
+      "label": "Story 3.0",
+      "url": "https://example.invalid/jira-work:Story-64",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Story"
+    },
+    {
+      "id": "jira-work:Bug-65",
+      "provider": "jira-work",
+      "label": "Bug 3.0.0",
+      "url": "https://example.invalid/jira-work:Bug-65",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Bug"
+    },
+    {
+      "id": "jira-work:Task-66",
+      "provider": "jira-work",
+      "label": "Task 3.0.1",
+      "url": "https://example.invalid/jira-work:Task-66",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Task"
+    },
+    {
+      "id": "github:pull-request-67",
+      "provider": "github",
+      "label": "PR for 3.0.1",
+      "url": "https://example.invalid/github:pull-request-67",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "working",
+      "providerCanReportStatus": false,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "pull-request"
+    },
+    {
+      "id": "jira-work:Task-68",
+      "provider": "jira-work",
+      "label": "Task 3.0.2",
+      "url": "https://example.invalid/jira-work:Task-68",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Task"
+    },
+    {
+      "id": "jira-work:Story-69",
+      "provider": "jira-work",
+      "label": "Story 3.1",
+      "url": "https://example.invalid/jira-work:Story-69",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "idle",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Story"
+    },
+    {
+      "id": "jira-work:Bug-70",
+      "provider": "jira-work",
+      "label": "Bug 3.1.0",
+      "url": "https://example.invalid/jira-work:Bug-70",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Bug"
+    },
+    {
+      "id": "jira-work:Task-71",
+      "provider": "jira-work",
+      "label": "Task 3.1.1",
+      "url": "https://example.invalid/jira-work:Task-71",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Task"
+    },
+    {
+      "id": "github:pull-request-72",
+      "provider": "github",
+      "label": "PR for 3.1.1",
+      "url": "https://example.invalid/github:pull-request-72",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "none",
+      "providerCanReportStatus": false,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "pull-request"
+    },
+    {
+      "id": "jira-work:Task-73",
+      "provider": "jira-work",
+      "label": "Task 3.1.2",
+      "url": "https://example.invalid/jira-work:Task-73",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "stalled",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Task"
+    },
+    {
+      "id": "jira-work:Task-74",
+      "provider": "jira-work",
+      "label": "Task 3.1.3",
+      "url": "https://example.invalid/jira-work:Task-74",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "stalled",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Task"
+    },
+    {
+      "id": "github:pull-request-75",
+      "provider": "github",
+      "label": "PR for 3.1.3",
+      "url": "https://example.invalid/github:pull-request-75",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "blocked",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "pull-request"
+    },
+    {
+      "id": "jira-work:Epic-76",
+      "provider": "jira-work",
+      "label": "Epic 4",
+      "url": "https://example.invalid/jira-work:Epic-76",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Epic"
+    },
+    {
+      "id": "jira-work:Story-77",
+      "provider": "jira-work",
+      "label": "Story 4.0",
+      "url": "https://example.invalid/jira-work:Story-77",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "blocked",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Story"
+    },
+    {
+      "id": "jira-work:Task-78",
+      "provider": "jira-work",
+      "label": "Task 4.0.0",
+      "url": "https://example.invalid/jira-work:Task-78",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Task"
+    },
+    {
+      "id": "jira-work:Bug-79",
+      "provider": "jira-work",
+      "label": "Bug 4.0.1",
+      "url": "https://example.invalid/jira-work:Bug-79",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Bug"
+    },
+    {
+      "id": "github:pull-request-80",
+      "provider": "github",
+      "label": "PR for 4.0.1",
+      "url": "https://example.invalid/github:pull-request-80",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "idle",
+      "providerCanReportStatus": false,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "pull-request"
+    },
+    {
+      "id": "jira-work:Story-81",
+      "provider": "jira-work",
+      "label": "Story 4.1",
+      "url": "https://example.invalid/jira-work:Story-81",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": true,
+      "discovery": "link",
+      "resourceType": "Story"
+    },
+    {
+      "id": "jira-work:Task-82",
+      "provider": "jira-work",
+      "label": "Task 4.1.0",
+      "url": "https://example.invalid/jira-work:Task-82",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Task"
+    },
+    {
+      "id": "jira-work:Task-83",
+      "provider": "jira-work",
+      "label": "Task 4.1.1",
+      "url": "https://example.invalid/jira-work:Task-83",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Task"
+    },
+    {
+      "id": "jira-work:Epic-84",
+      "provider": "jira-work",
+      "label": "Epic 5",
+      "url": "https://example.invalid/jira-work:Epic-84",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "idle",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Epic"
+    },
+    {
+      "id": "jira-work:Story-85",
+      "provider": "jira-work",
+      "label": "Story 5.0",
+      "url": "https://example.invalid/jira-work:Story-85",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "working",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Story"
+    },
+    {
+      "id": "jira-work:Bug-86",
+      "provider": "jira-work",
+      "label": "Bug 5.0.0",
+      "url": "https://example.invalid/jira-work:Bug-86",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Bug"
+    },
+    {
+      "id": "jira-work:Bug-87",
+      "provider": "jira-work",
+      "label": "Bug 5.0.1",
+      "url": "https://example.invalid/jira-work:Bug-87",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Bug"
+    },
+    {
+      "id": "jira-work:Story-88",
+      "provider": "jira-work",
+      "label": "Story 5.1",
+      "url": "https://example.invalid/jira-work:Story-88",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "idle",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Story"
+    },
+    {
+      "id": "jira-work:Task-89",
+      "provider": "jira-work",
+      "label": "Task 5.1.0",
+      "url": "https://example.invalid/jira-work:Task-89",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "working",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Task"
+    },
+    {
+      "id": "jira-work:Sub-task-90",
+      "provider": "jira-work",
+      "label": "Sub-task 5.1.1",
+      "url": "https://example.invalid/jira-work:Sub-task-90",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Sub-task"
+    },
+    {
+      "id": "jira-work:Sub-task-91",
+      "provider": "jira-work",
+      "label": "Sub-task 5.1.2",
+      "url": "https://example.invalid/jira-work:Sub-task-91",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Sub-task"
+    },
+    {
+      "id": "jira-work:Story-92",
+      "provider": "jira-work",
+      "label": "Story 5.2",
+      "url": "https://example.invalid/jira-work:Story-92",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Story"
+    },
+    {
+      "id": "jira-work:Bug-93",
+      "provider": "jira-work",
+      "label": "Bug 5.2.0",
+      "url": "https://example.invalid/jira-work:Bug-93",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Bug"
+    },
+    {
+      "id": "jira-work:Task-94",
+      "provider": "jira-work",
+      "label": "Task 5.2.1",
+      "url": "https://example.invalid/jira-work:Task-94",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Task"
+    },
+    {
+      "id": "github:pull-request-95",
+      "provider": "github",
+      "label": "PR for 5.2.1",
+      "url": "https://example.invalid/github:pull-request-95",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "pull-request"
+    },
+    {
+      "id": "jira-work:Sub-task-96",
+      "provider": "jira-work",
+      "label": "Sub-task 5.2.2",
+      "url": "https://example.invalid/jira-work:Sub-task-96",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Sub-task"
+    },
+    {
+      "id": "jira-work:Sub-task-97",
+      "provider": "jira-work",
+      "label": "Sub-task 5.2.3",
+      "url": "https://example.invalid/jira-work:Sub-task-97",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Sub-task"
+    },
+    {
+      "id": "jira-work:Story-98",
+      "provider": "jira-work",
+      "label": "Story 5.3",
+      "url": "https://example.invalid/jira-work:Story-98",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "blocked",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Story"
+    },
+    {
+      "id": "jira-work:Bug-99",
+      "provider": "jira-work",
+      "label": "Bug 5.3.0",
+      "url": "https://example.invalid/jira-work:Bug-99",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Bug"
+    },
+    {
+      "id": "jira-work:Sub-task-100",
+      "provider": "jira-work",
+      "label": "Sub-task 5.3.1",
+      "url": "https://example.invalid/jira-work:Sub-task-100",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "stalled",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Sub-task"
+    },
+    {
+      "id": "jira-work:Task-101",
+      "provider": "jira-work",
+      "label": "Task 5.3.2",
+      "url": "https://example.invalid/jira-work:Task-101",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Task"
+    },
+    {
+      "id": "jira-work:Task-102",
+      "provider": "jira-work",
+      "label": "Task 5.3.3",
+      "url": "https://example.invalid/jira-work:Task-102",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Task"
+    },
+    {
+      "id": "jira-work:Epic-103",
+      "provider": "jira-work",
+      "label": "Epic 6",
+      "url": "https://example.invalid/jira-work:Epic-103",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Epic"
+    },
+    {
+      "id": "jira-work:Epic-104",
+      "provider": "jira-work",
+      "label": "Epic 7",
+      "url": "https://example.invalid/jira-work:Epic-104",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "query",
+      "resourceType": "Epic"
+    },
+    {
+      "id": "jira-work:Improvement-105",
+      "provider": "jira-work",
+      "label": "Improvement 105",
+      "url": "https://example.invalid/jira-work:Improvement-105",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Improvement"
+    },
+    {
+      "id": "jira-work:Improvement-106",
+      "provider": "jira-work",
+      "label": "Improvement 106",
+      "url": "https://example.invalid/jira-work:Improvement-106",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "stalled",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Improvement"
+    },
+    {
+      "id": "jira-work:Improvement-107",
+      "provider": "jira-work",
+      "label": "Improvement 107",
+      "url": "https://example.invalid/jira-work:Improvement-107",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": true,
+      "discovery": "link",
+      "resourceType": "Improvement"
+    },
+    {
+      "id": "confluence:confluence-page-108",
+      "provider": "confluence",
+      "label": "Doc 108",
+      "url": "https://example.invalid/confluence:confluence-page-108",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": false,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "confluence-page"
+    },
+    {
+      "id": "confluence:confluence-page-109",
+      "provider": "confluence",
+      "label": "Doc 109",
+      "url": "https://example.invalid/confluence:confluence-page-109",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": false,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "confluence-page"
+    },
+    {
+      "id": "confluence:confluence-page-110",
+      "provider": "confluence",
+      "label": "Doc 110",
+      "url": "https://example.invalid/confluence:confluence-page-110",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "none",
+      "providerCanReportStatus": false,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "confluence-page"
+    },
+    {
+      "id": "confluence:confluence-page-111",
+      "provider": "confluence",
+      "label": "Doc 111",
+      "url": "https://example.invalid/confluence:confluence-page-111",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": false,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "confluence-page"
+    },
+    {
+      "id": "confluence:confluence-page-112",
+      "provider": "confluence",
+      "label": "Doc 112",
+      "url": "https://example.invalid/confluence:confluence-page-112",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "blocked",
+      "providerCanReportStatus": false,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "confluence-page"
+    },
+    {
+      "id": "jira-work:Improvement-113",
+      "provider": "jira-work",
+      "label": "Improvement 113",
+      "url": "https://example.invalid/jira-work:Improvement-113",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Improvement"
+    },
+    {
+      "id": "confluence:confluence-page-114",
+      "provider": "confluence",
+      "label": "Doc 114",
+      "url": "https://example.invalid/confluence:confluence-page-114",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "working",
+      "providerCanReportStatus": false,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "confluence-page"
+    },
+    {
+      "id": "confluence:confluence-page-115",
+      "provider": "confluence",
+      "label": "Doc 115",
+      "url": "https://example.invalid/confluence:confluence-page-115",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": false,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "confluence-page"
+    },
+    {
+      "id": "jira-work:Improvement-116",
+      "provider": "jira-work",
+      "label": "Improvement 116",
+      "url": "https://example.invalid/jira-work:Improvement-116",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "idle",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Improvement"
+    },
+    {
+      "id": "confluence:confluence-page-117",
+      "provider": "confluence",
+      "label": "Doc 117",
+      "url": "https://example.invalid/confluence:confluence-page-117",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "none",
+      "providerCanReportStatus": false,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "confluence-page"
+    },
+    {
+      "id": "confluence:confluence-page-118",
+      "provider": "confluence",
+      "label": "Doc 118",
+      "url": "https://example.invalid/confluence:confluence-page-118",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "none",
+      "providerCanReportStatus": false,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "confluence-page"
+    },
+    {
+      "id": "confluence:confluence-page-119",
+      "provider": "confluence",
+      "label": "Doc 119",
+      "url": "https://example.invalid/confluence:confluence-page-119",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": false,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "confluence-page"
+    },
+    {
+      "id": "confluence:confluence-page-120",
+      "provider": "confluence",
+      "label": "Doc 120",
+      "url": "https://example.invalid/confluence:confluence-page-120",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "none",
+      "providerCanReportStatus": false,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "confluence-page"
+    },
+    {
+      "id": "confluence:confluence-page-121",
+      "provider": "confluence",
+      "label": "Doc 121",
+      "url": "https://example.invalid/confluence:confluence-page-121",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "none",
+      "providerCanReportStatus": false,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "confluence-page"
+    },
+    {
+      "id": "confluence:confluence-page-122",
+      "provider": "confluence",
+      "label": "Doc 122",
+      "url": "https://example.invalid/confluence:confluence-page-122",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "none",
+      "providerCanReportStatus": false,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "confluence-page"
+    },
+    {
+      "id": "confluence:confluence-page-123",
+      "provider": "confluence",
+      "label": "Doc 123",
+      "url": "https://example.invalid/confluence:confluence-page-123",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": false,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "confluence-page"
+    },
+    {
+      "id": "confluence:confluence-page-124",
+      "provider": "confluence",
+      "label": "Doc 124",
+      "url": "https://example.invalid/confluence:confluence-page-124",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "working",
+      "providerCanReportStatus": false,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "confluence-page"
+    },
+    {
+      "id": "jira-work:Improvement-125",
+      "provider": "jira-work",
+      "label": "Improvement 125",
+      "url": "https://example.invalid/jira-work:Improvement-125",
+      "ownerSourceId": "codey@codey",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": true,
+      "discovery": "link",
+      "resourceType": "Improvement"
+    },
+    {
+      "id": "confluence:confluence-page-126",
+      "provider": "confluence",
+      "label": "Doc 126",
+      "url": "https://example.invalid/confluence:confluence-page-126",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": false,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "confluence-page"
+    },
+    {
+      "id": "jira-work:Improvement-127",
+      "provider": "jira-work",
+      "label": "Improvement 127",
+      "url": "https://example.invalid/jira-work:Improvement-127",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Improvement"
+    },
+    {
+      "id": "confluence:confluence-page-128",
+      "provider": "confluence",
+      "label": "Doc 128",
+      "url": "https://example.invalid/confluence:confluence-page-128",
+      "ownerSourceId": "wroos-bit@servyboi",
+      "agentStatus": "idle",
+      "providerCanReportStatus": false,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "confluence-page"
+    },
+    {
+      "id": "jira-work:Improvement-129",
+      "provider": "jira-work",
+      "label": "Improvement 129",
+      "url": "https://example.invalid/jira-work:Improvement-129",
+      "ownerSourceId": "brooswit@servyboi",
+      "agentStatus": "none",
+      "providerCanReportStatus": true,
+      "admissionWithheld": false,
+      "discovery": "link",
+      "resourceType": "Improvement"
+    }
+  ],
+  "edges": [
+    {
+      "source": "jira-work:Epic-0",
+      "target": "jira-work:Story-1",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Story-1",
+      "target": "jira-work:Task-2",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Story-1",
+      "target": "jira-work:Bug-3",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Epic-0",
+      "target": "jira-work:Story-4",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Story-4",
+      "target": "jira-work:Sub-task-5",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Story-4",
+      "target": "jira-work:Task-6",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Task-6",
+      "target": "github:pull-request-7",
+      "kind": "link"
+    },
+    {
+      "source": "jira-work:Story-4",
+      "target": "jira-work:Bug-8",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Epic-0",
+      "target": "jira-work:Story-9",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Story-9",
+      "target": "jira-work:Sub-task-10",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Story-9",
+      "target": "jira-work:Task-11",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Task-11",
+      "target": "github:pull-request-12",
+      "kind": "link"
+    },
+    {
+      "source": "jira-work:Epic-0",
+      "target": "jira-work:Story-13",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Story-13",
+      "target": "jira-work:Bug-14",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Bug-14",
+      "target": "github:pull-request-15",
+      "kind": "link"
+    },
+    {
+      "source": "jira-work:Story-13",
+      "target": "jira-work:Sub-task-16",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Sub-task-16",
+      "target": "github:pull-request-17",
+      "kind": "link"
+    },
+    {
+      "source": "jira-work:Story-13",
+      "target": "jira-work:Sub-task-18",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Story-13",
+      "target": "jira-work:Task-19",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Story-13",
+      "target": "jira-work:Task-20",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Epic-21",
+      "target": "jira-work:Story-22",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Story-22",
+      "target": "jira-work:Sub-task-23",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Story-22",
+      "target": "jira-work:Bug-24",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Story-22",
+      "target": "jira-work:Task-25",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Story-22",
+      "target": "jira-work:Task-26",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Story-22",
+      "target": "jira-work:Bug-27",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Epic-21",
+      "target": "jira-work:Story-28",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Story-28",
+      "target": "jira-work:Sub-task-29",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Story-28",
+      "target": "jira-work:Bug-30",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Story-28",
+      "target": "jira-work:Sub-task-31",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Sub-task-31",
+      "target": "github:pull-request-32",
+      "kind": "link"
+    },
+    {
+      "source": "jira-work:Story-28",
+      "target": "jira-work:Task-33",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Task-33",
+      "target": "github:pull-request-34",
+      "kind": "link"
+    },
+    {
+      "source": "jira-work:Story-28",
+      "target": "jira-work:Task-35",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Task-35",
+      "target": "github:pull-request-36",
+      "kind": "link"
+    },
+    {
+      "source": "jira-work:Epic-37",
+      "target": "jira-work:Story-38",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Story-38",
+      "target": "jira-work:Task-39",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Story-38",
+      "target": "jira-work:Task-40",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Story-38",
+      "target": "jira-work:Task-41",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Story-38",
+      "target": "jira-work:Task-42",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Epic-37",
+      "target": "jira-work:Story-43",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Story-43",
+      "target": "jira-work:Task-44",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Story-43",
+      "target": "jira-work:Bug-45",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Story-43",
+      "target": "jira-work:Task-46",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Task-46",
+      "target": "github:pull-request-47",
+      "kind": "link"
+    },
+    {
+      "source": "jira-work:Story-43",
+      "target": "jira-work:Bug-48",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Bug-48",
+      "target": "github:pull-request-49",
+      "kind": "link"
+    },
+    {
+      "source": "jira-work:Story-43",
+      "target": "jira-work:Sub-task-50",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Epic-37",
+      "target": "jira-work:Story-51",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Story-51",
+      "target": "jira-work:Task-52",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Story-51",
+      "target": "jira-work:Bug-53",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Story-51",
+      "target": "jira-work:Task-54",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Task-54",
+      "target": "github:pull-request-55",
+      "kind": "link"
+    },
+    {
+      "source": "jira-work:Story-51",
+      "target": "jira-work:Sub-task-56",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Epic-37",
+      "target": "jira-work:Story-57",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Story-57",
+      "target": "jira-work:Bug-58",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Story-57",
+      "target": "jira-work:Task-59",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Task-59",
+      "target": "github:pull-request-60",
+      "kind": "link"
+    },
+    {
+      "source": "jira-work:Story-57",
+      "target": "jira-work:Task-61",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Story-57",
+      "target": "jira-work:Bug-62",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Epic-63",
+      "target": "jira-work:Story-64",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Story-64",
+      "target": "jira-work:Bug-65",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Story-64",
+      "target": "jira-work:Task-66",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Task-66",
+      "target": "github:pull-request-67",
+      "kind": "link"
+    },
+    {
+      "source": "jira-work:Story-64",
+      "target": "jira-work:Task-68",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Epic-63",
+      "target": "jira-work:Story-69",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Story-69",
+      "target": "jira-work:Bug-70",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Story-69",
+      "target": "jira-work:Task-71",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Task-71",
+      "target": "github:pull-request-72",
+      "kind": "link"
+    },
+    {
+      "source": "jira-work:Story-69",
+      "target": "jira-work:Task-73",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Story-69",
+      "target": "jira-work:Task-74",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Task-74",
+      "target": "github:pull-request-75",
+      "kind": "link"
+    },
+    {
+      "source": "jira-work:Epic-76",
+      "target": "jira-work:Story-77",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Story-77",
+      "target": "jira-work:Task-78",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Story-77",
+      "target": "jira-work:Bug-79",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Bug-79",
+      "target": "github:pull-request-80",
+      "kind": "link"
+    },
+    {
+      "source": "jira-work:Epic-76",
+      "target": "jira-work:Story-81",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Story-81",
+      "target": "jira-work:Task-82",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Story-81",
+      "target": "jira-work:Task-83",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Epic-84",
+      "target": "jira-work:Story-85",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Story-85",
+      "target": "jira-work:Bug-86",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Story-85",
+      "target": "jira-work:Bug-87",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Epic-84",
+      "target": "jira-work:Story-88",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Story-88",
+      "target": "jira-work:Task-89",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Story-88",
+      "target": "jira-work:Sub-task-90",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Story-88",
+      "target": "jira-work:Sub-task-91",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Epic-84",
+      "target": "jira-work:Story-92",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Story-92",
+      "target": "jira-work:Bug-93",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Story-92",
+      "target": "jira-work:Task-94",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Task-94",
+      "target": "github:pull-request-95",
+      "kind": "link"
+    },
+    {
+      "source": "jira-work:Story-92",
+      "target": "jira-work:Sub-task-96",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Story-92",
+      "target": "jira-work:Sub-task-97",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Epic-84",
+      "target": "jira-work:Story-98",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Story-98",
+      "target": "jira-work:Bug-99",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Story-98",
+      "target": "jira-work:Sub-task-100",
+      "kind": "parent"
+    },
+    {
+      "source": "jira-work:Story-98",
+      "target": "jira-work:Task-101",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Story-98",
+      "target": "jira-work:Task-102",
+      "kind": "implements"
+    },
+    {
+      "source": "jira-work:Bug-79",
+      "target": "confluence:confluence-page-114",
+      "kind": "relates"
+    },
+    {
+      "source": "jira-work:Story-69",
+      "target": "jira-work:Improvement-116",
+      "kind": "relates"
+    },
+    {
+      "source": "jira-work:Story-13",
+      "target": "jira-work:Task-19",
+      "kind": "relates"
+    },
+    {
+      "source": "jira-work:Story-88",
+      "target": "jira-work:Sub-task-97",
+      "kind": "relates"
+    },
+    {
+      "source": "jira-work:Sub-task-97",
+      "target": "github:pull-request-72",
+      "kind": "relates"
+    },
+    {
+      "source": "jira-work:Task-66",
+      "target": "jira-work:Task-74",
+      "kind": "relates"
+    },
+    {
+      "source": "jira-work:Epic-76",
+      "target": "jira-work:Epic-103",
+      "kind": "relates"
+    },
+    {
+      "source": "jira-work:Task-44",
+      "target": "github:pull-request-80",
+      "kind": "relates"
+    },
+    {
+      "source": "jira-work:Task-94",
+      "target": "jira-work:Sub-task-56",
+      "kind": "relates"
+    },
+    {
+      "source": "github:pull-request-47",
+      "target": "jira-work:Epic-37",
+      "kind": "relates"
+    }
+  ],
+  "queries": [
+    {
+      "sourceId": "brooswit@servyboi",
+      "provider": "jira-work",
+      "query": "status = \"In Progress\"",
+      "matched": 10,
+      "truncated": false
+    },
+    {
+      "sourceId": "wroos-bit@servyboi",
+      "provider": "jira-work",
+      "query": "status = \"In Progress\"",
+      "matched": 10,
+      "truncated": false
+    },
+    {
+      "sourceId": "codey@codey",
+      "provider": "jira-work",
+      "query": "status = \"In Progress\"",
+      "matched": 10,
+      "truncated": false
+    }
+  ]
+}

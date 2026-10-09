@@ -7,6 +7,7 @@ export {
   type SeerConfig,
 } from "./config/schema.ts";
 export { loadConfig, parseConfig, ConfigError } from "./config/loader.ts";
+export { loadSizeConfig, loadLayoutConfig, type SizeConfig, type LayoutConfig } from "./config/env.ts";
 
 export {
   SCHEMA_VERSION,

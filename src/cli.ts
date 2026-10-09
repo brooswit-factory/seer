@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { loadConfig } from "./config/loader.ts";
 import { resolveConfigPath, stripConfigFlag, type ResolvedConfigPath } from "./config/resolve-path.ts";
 import type { SeerConfig } from "./config/schema.ts";
+import { loadSizeConfig, loadLayoutConfig } from "./config/env.ts";
 import { parseGraph } from "./graph/validate.ts";
 import { collect } from "./collector/collect.ts";
 import { JiraProvider } from "./collector/jira.ts";
@@ -93,6 +94,8 @@ async function runServe(argv: string[]) {
     refreshSeconds: config?.refreshSeconds ?? 30,
     fixtureGraph: loadFixtureGraph(),
     sanitizeError,
+    sizeConfig: loadSizeConfig(),
+    layoutConfig: loadLayoutConfig(),
   });
 
   const collectTimeoutSeconds = config?.collectTimeoutSeconds ?? 60;
