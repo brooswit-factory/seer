@@ -1,0 +1,8 @@
+bump: minor
+
+### Added
+- Node-size multipliers (FACTORY-890): every node is drawn at `SEER_SIZE_BASE` (default 2x) its per-type size; a node with a live agent (status working/blocked/idle/stalled, provider able to report) is drawn at `SEER_SIZE_ACTIVE` (default 8x) instead — the active multiplier REPLACES the base one, it is never stacked. Both are env-configurable, validated positive numbers, and echoed on `/graph.json` (`sizeBase`/`sizeActive`) rather than hardcoded in `public/app.js`. `public/node-scale.js` is the pure, table-tested (agentStatus x resourceType) decision. The legend now shows the live base/active sizes; collision radius, hit area, and label offset all follow the scaled size, while label font size stays fixed.
+- Compact layout (FACTORY-889 COMPACT LAYOUT item): auto fit-to-view on load and after every refresh (unless the user has panned/zoomed since the last fit — their transform is preserved), plus a "Fit" button to re-fit on demand (`public/fit-view.js`, pure and unit-tested). Tighter link distance, weaker repulsion, and a new centering/gravity force are now config constants (`SEER_LINK_DISTANCE`, `SEER_CHARGE`, `SEER_GRAVITY`) with tighter-than-before defaults, all echoed on `/graph.json`. `test/layout.test.ts` runs the force simulation to rest headless against a ~136-node fixture and asserts the fitted bounding box fits a 1440x900 viewport at a readable label scale with no significant node overlap — see that test's header comment for why the fixture is a synthetic stand-in rather than a live capture from codey's seer.
+
+### Changed
+- Force-simulation collision radius now follows each node's own scaled size (a function, not the old fixed `NODE_RADIUS + 4`), so bigger live-agent nodes push their neighbours away proportionally.

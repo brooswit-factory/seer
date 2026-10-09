@@ -88,5 +88,16 @@ export const GraphSchema = z.object({
   usingFixture: z.boolean().optional(),
   /** The server's configured cache TTL in seconds, echoed so the viewer polls on the same interval. */
   refreshSeconds: z.number().int().positive().optional(),
+  /**
+   * Node-size multipliers (FACTORY-890), from `SEER_SIZE_BASE`/`SEER_SIZE_ACTIVE` — echoed so the
+   * viewer never hardcodes them. `sizeActive` REPLACES `sizeBase` for a live-agent node, it is
+   * never stacked on top of it.
+   */
+  sizeBase: z.number().positive().optional(),
+  sizeActive: z.number().positive().optional(),
+  /** Compact-layout force-simulation constants (FACTORY-890), from `SEER_LINK_DISTANCE`/`SEER_CHARGE`/`SEER_GRAVITY`. */
+  linkDistance: z.number().positive().optional(),
+  charge: z.number().positive().optional(),
+  gravity: z.number().positive().optional(),
 });
 export type Graph = z.infer<typeof GraphSchema>;

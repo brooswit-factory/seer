@@ -1,5 +1,11 @@
 import type { Graph } from "../graph/schema.ts";
 import { parseGraph } from "../graph/validate.ts";
+import type { LayoutConfig, SizeConfig } from "../config/env.ts";
+
+/** Matches `loadSizeConfig()`'s own defaults — used only when a caller (e.g. a test) omits `sizeConfig`. */
+const DEFAULT_SIZE_CONFIG: SizeConfig = { base: 2, active: 8 };
+/** Matches `loadLayoutConfig()`'s own defaults — used only when a caller omits `layoutConfig`. */
+const DEFAULT_LAYOUT_CONFIG: LayoutConfig = { linkDistance: 40, charge: 120, gravity: 0.08 };
 
 export interface GraphCacheOptions {
   /** Runs one real collection and returns a schema-conformant graph. Throws on any failure. */
@@ -12,6 +18,10 @@ export interface GraphCacheOptions {
   sanitizeError: (cause: unknown) => string;
   /** Injectable clock, for deterministic TTL tests. */
   now?: () => number;
+  /** Node-size multipliers (FACTORY-890), echoed on every response. Defaults to `loadSizeConfig()`'s own defaults. */
+  sizeConfig?: SizeConfig;
+  /** Compact-layout force constants (FACTORY-890), echoed on every response. Defaults to `loadLayoutConfig()`'s own defaults. */
+  layoutConfig?: LayoutConfig;
 }
 
 /**
@@ -26,12 +36,16 @@ export class GraphCache {
   private lastGoodAt: number | null = null;
   private inFlight: Promise<Graph> | null = null;
   private readonly now: () => number;
+  private readonly sizeConfig: SizeConfig;
+  private readonly layoutConfig: LayoutConfig;
 
   /** Number of real `collect()` runs started — exposed only so tests can assert single-flight behaviour. */
   collectCount = 0;
 
   constructor(private readonly options: GraphCacheOptions) {
     this.now = options.now ?? Date.now;
+    this.sizeConfig = options.sizeConfig ?? DEFAULT_SIZE_CONFIG;
+    this.layoutConfig = options.layoutConfig ?? DEFAULT_LAYOUT_CONFIG;
   }
 
   async getGraph(): Promise<Graph> {
@@ -67,6 +81,15 @@ export class GraphCache {
   }
 
   private withMeta(graph: Graph, meta: { stale: boolean; staleSince: string | null; error: string | null; usingFixture: boolean }): Graph {
-    return { ...graph, ...meta, refreshSeconds: this.options.refreshSeconds };
+    return {
+      ...graph,
+      ...meta,
+      refreshSeconds: this.options.refreshSeconds,
+      sizeBase: this.sizeConfig.base,
+      sizeActive: this.sizeConfig.active,
+      linkDistance: this.layoutConfig.linkDistance,
+      charge: this.layoutConfig.charge,
+      gravity: this.layoutConfig.gravity,
+    };
   }
 }
