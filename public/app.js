@@ -1,7 +1,7 @@
 import { colorForNode, statusLabel, STATUS_COLORS, CANNOT_REPORT_COLOR } from "./colors.js";
 import { jiraStatusLabel, JIRA_STATUS_BORDERS } from "./jira-status.js";
 import { classifyQueryRecord, queryStatusLabel } from "./query-status.js";
-import { shapeForNode, borderForNode, SHAPE_HEXAGON, SHAPE_ROUNDED_SQUARE } from "./shapes.js";
+import { shapeForNode, borderForNode, HAIRLINE_EXTRA_WIDTH, SHAPE_HEXAGON, SHAPE_ROUNDED_SQUARE } from "./shapes.js";
 import { scaledSizeForNode } from "./node-scale.js";
 import { computeFitTransform, shouldFit } from "./fit-view.js";
 import { isProjectNode, projectFill, SHAPE_PROJECT, PROJECT_LINK_DISTANCE } from "./project.js";
@@ -208,15 +208,18 @@ function renderProjectLegend() {
   ].join("");
 }
 
-/** Agent status -> fill legend (FACTORY-939, reverting FACTORY-900's inversion): colors.js's herdr colours, as a fill swatch again. */
+/** Agent status -> fill legend (FACTORY-939, reverting FACTORY-900's inversion; recoloured by FACTORY-944): colors.js's current-theme colours, as a fill swatch. */
 function renderFillLegend() {
   const el = document.getElementById("fill-legend");
+  const theme = currentTheme();
+  const colors = STATUS_COLORS[theme];
+  const cannotReport = CANNOT_REPORT_COLOR[theme];
   const rows = ["<h2>Agent status → fill</h2>"];
-  for (const [status, hex] of Object.entries(STATUS_COLORS)) {
+  for (const [status, hex] of Object.entries(colors)) {
     rows.push(`<div class="legend-row"><span class="swatch" style="background:${hex}"></span><span>${status}</span></div>`);
   }
   rows.push(
-    `<div class="legend-row"><span class="swatch dashed" style="background:${CANNOT_REPORT_COLOR};border-color:${CANNOT_REPORT_COLOR}"></span><span>cannot report status (same neutral as "none" — distinguished by the dashed border, see below)</span></div>`,
+    `<div class="legend-row"><span class="swatch dashed" style="background:${cannotReport};border-color:${cannotReport}"></span><span>cannot report status (same neutral as "none" — distinguished by the dashed border, see below)</span></div>`,
   );
   el.innerHTML = rows.join("");
 }
@@ -442,6 +445,10 @@ function renderGraph(initialGraph) {
     // Shape carries resource type (FACTORY-876 item 3); fill is agent status, border is Jira
     // status (FACTORY-939, reverting FACTORY-900's inversion) — type is never encoded in hue
     // either way. Stroke attrs are set per-node below (borderForNode), not here.
+    // `node-border-halo` (FACTORY-944 item 1) sits behind `node-shape` and is only ever painted
+    // when borderForNode's `hairline` is non-null (dark-theme "To Do"): a wider, unfilled stroke
+    // of the same path, so a thin ring of it shows past the narrower border stroke on top.
+    entered.append("path").attr("class", "node-border-halo").attr("fill", "none");
     entered.append("path").attr("class", "node-shape");
     entered.append("text").attr("class", "node-label").attr("text-anchor", "middle");
     entered.on("mouseenter", showTooltip).on("mousemove", showTooltip).on("mouseleave", hideTooltip).on("click", showTooltip);
@@ -451,22 +458,31 @@ function renderGraph(initialGraph) {
     // Re-run on every refresh, not just on enter: a node whose resourceType/jiraStatus/agentStatus
     // (or anything else shape/fill/border-relevant) changed needs its path/size/fill/border/label
     // offset to follow, in place.
+    merged.select("path.node-border-halo").attr("d", (d) => symbolPathForNode(d));
     merged
       .select("path.node-shape")
       .attr("d", (d) => symbolPathForNode(d))
-      .attr("fill", (d) => (isProjectNode(d) ? projectFill(currentTheme()) : colorForNode(d)))
+      .attr("fill", (d) => (isProjectNode(d) ? projectFill(currentTheme()) : colorForNode(d, currentTheme())))
       .each(function (d) {
-        const border = borderForNode(d, currentTheme());
+        const theme = currentTheme();
+        const border = borderForNode(d, theme);
         const shapeSel = d3.select(this);
+        const haloSel = d3.select(this.parentNode).select("path.node-border-halo");
         if (border.visible) {
           shapeSel
             .attr("stroke", border.stroke)
             .attr("stroke-width", border.width)
             .attr("stroke-dasharray", border.dashed ? "3,2" : null);
+          if (border.hairline) {
+            haloSel.attr("stroke", border.hairline).attr("stroke-width", border.width + HAIRLINE_EXTRA_WIDTH).attr("stroke-dasharray", border.dashed ? "3,2" : null);
+          } else {
+            haloSel.attr("stroke", "none");
+          }
         } else {
           // No Jira-status border to draw (e.g. a project node) — the shape stays plain, same
           // neutral outline every node used pre-FACTORY-900.
           shapeSel.attr("stroke", "var(--node-stroke)").attr("stroke-width", 1.5).attr("stroke-dasharray", null);
+          haloSel.attr("stroke", "none");
         }
       });
     merged

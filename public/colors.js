@@ -1,31 +1,47 @@
 // The ONE place seer's node-colour decision lives (FACTORY-841 DECISIONS comment 31060,
-// item 5). Hexes verified against herdr's own status->colour function (`status_color` in
-// src/client/shell.rs) and its default Catppuccin Mocha `Palette` (src/app/state.rs) in a
-// herdrdev/herdr checkout: herdr's AgentStatus enum has no "stalled" counterpart at all —
-// "stalled" is seer/butchr's own decision, not herdr's, which is why it maps to peach rather
-// than a verified herdr token.
+// item 5; recoloured by FACTORY-944/FACTORY-943's addendum, which REPLACES the FACTORY-841
+// herdr-verified table below: working/idle are no longer herdr's own yellow/green, they are
+// Brooswit's requested green/yellow — see FACTORY-944 for the exact brief).
 //
 // This file is loaded directly by the browser (plain <script type="module">, no bundler) and
 // is also imported as-is by test/colors.test.ts, so there is exactly one copy of this table.
-
+//
+// Theme tokens, light + dark (FACTORY-944 item 1 — mirrors jira-status.js's JIRA_STATUS_BORDERS
+// light/dark split): dark uses the existing Catppuccin Mocha hexes (bright, legible on the dark
+// `--bg`); light uses the Catppuccin Latte equivalents (deeper/more saturated, legible on the
+// light `--bg`) rather than reusing the Mocha hexes verbatim on a light canvas.
 export const STATUS_COLORS = Object.freeze({
-  working: "#f9e2af", // herdr Working -> yellow
-  blocked: "#f38ba8", // herdr Blocked -> red
-  idle: "#a6e3a1", // herdr Idle -> green
-  stalled: "#fab387", // no herdr counterpart; decision: peach (herdr's "interrupted/warning" token)
-  none: "#6c7086", // herdr Unknown -> overlay0
+  light: Object.freeze({
+    working: "#40a02b", // green (Catppuccin Latte) — was yellow pre-FACTORY-944
+    blocked: "#d20f39", // red (Catppuccin Latte) — unchanged role
+    idle: "#df8e1d", // yellow (Catppuccin Latte) — was green pre-FACTORY-944
+    stalled: "#fe640b", // orange (Catppuccin Latte) — unchanged role
+    none: "#9ca0b0", // grey (Catppuccin Latte overlay0) — unchanged role
+  }),
+  dark: Object.freeze({
+    working: "#a6e3a1", // green (Catppuccin Mocha) — was herdr Idle's hex pre-FACTORY-944
+    blocked: "#f38ba8", // red (Catppuccin Mocha) — unchanged, herdr Blocked
+    idle: "#f9e2af", // yellow (Catppuccin Mocha) — was herdr Working's hex pre-FACTORY-944
+    stalled: "#fab387", // orange/peach (Catppuccin Mocha) — unchanged, no herdr counterpart
+    none: "#6c7086", // grey (Catppuccin Mocha overlay0) — unchanged, herdr Unknown
+  }),
 });
 
-/** Same neutral as `none` — "cannot report" and "reports none" mean the same thing to a reader, distinguished by outline, not a second grey. */
-export const CANNOT_REPORT_COLOR = "#6c7086";
+/** Same neutral as `none` — "cannot report" and "reports none" mean the same thing to a reader, distinguished by outline, not a second grey. Theme tokens, same split as STATUS_COLORS. */
+export const CANNOT_REPORT_COLOR = Object.freeze({
+  light: STATUS_COLORS.light.none,
+  dark: STATUS_COLORS.dark.none,
+});
 
 /** herdr Done -> teal. Reserved: no butchr `agent:*` status maps to it today. */
 export const RESERVED_DONE_COLOR = "#94e2d5";
 
-/** Fill colour for a node, honouring the "cannot report" vs "reports none" distinction (same colour; see `outlineForNode`). */
-export function colorForNode(node) {
-  if (!node.providerCanReportStatus) return CANNOT_REPORT_COLOR;
-  return STATUS_COLORS[node.agentStatus] ?? STATUS_COLORS.none;
+/** Fill colour for a node in the given theme ("light" | "dark"), honouring the "cannot report" vs "reports none" distinction (same colour; see `outlineForNode`). */
+export function colorForNode(node, theme) {
+  const colors = STATUS_COLORS[theme] ?? STATUS_COLORS.light;
+  const cannotReport = CANNOT_REPORT_COLOR[theme] ?? CANNOT_REPORT_COLOR.light;
+  if (!node.providerCanReportStatus) return cannotReport;
+  return colors[node.agentStatus] ?? colors.none;
 }
 
 /** "dashed" when the provider cannot report status at all; "solid" otherwise. Never a second grey fill. */

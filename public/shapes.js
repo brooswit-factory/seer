@@ -21,7 +21,7 @@
 
 import { isProjectNode, SHAPE_PROJECT, PROJECT_SIZE } from "./project.js";
 import { outlineForNode } from "./colors.js";
-import { jiraBorderForNode } from "./jira-status.js";
+import { jiraBorderForNode, jiraBorderHairlineForNode } from "./jira-status.js";
 
 export const SHAPE_HEXAGON = "hexagon";
 export const SHAPE_SQUARE = "square";
@@ -86,10 +86,19 @@ export function sizeForNode(node) {
  */
 export const BORDER_WIDTH = 3.5; // within the ticket's 3-4px band.
 
+/** Extra width (px) the dark-mode "To Do" hairline halo is drawn at, underneath the main border stroke (FACTORY-944 item 1) — wide enough that a thin ring of it still shows past the narrower black stroke drawn on top. */
+export const HAIRLINE_EXTRA_WIDTH = 2;
+
 /**
  * How to draw a node's Jira-status border. A project node (FACTORY-911) has no Jira workflow
  * status of its own (it's a container, not a ticket) and never draws one — checked first, same
  * as every other project-node opt-out in this file.
+ *
+ * `hairline`, when non-null (FACTORY-944 item 1: dark-theme "To Do" only — see jira-status.js),
+ * is a second colour app.js draws as a wider stroke on the same shape UNDERNEATH the main
+ * border, so a thin ring of it remains visible outside the narrower near-black stroke on top —
+ * the "thin canvas-coloured gap / inner light hairline" the ticket asks for, keeping the black
+ * outline legible against the dark canvas without needing it to clear the contrast-ratio floor.
  */
 export function borderForNode(node, theme) {
   if (isProjectNode(node)) return { visible: false };
@@ -98,5 +107,6 @@ export function borderForNode(node, theme) {
     stroke: jiraBorderForNode(node, theme),
     width: BORDER_WIDTH,
     dashed: outlineForNode(node) === "dashed",
+    hairline: jiraBorderHairlineForNode(node, theme),
   };
 }

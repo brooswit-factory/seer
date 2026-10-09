@@ -109,10 +109,10 @@ the untouched default (tier 4) falls back to fixture-only mode on failure.
 
 `public/` is a plain static page (D3 loaded from a CDN `<script>` tag, no
 bundler): `index.html`, `app.js` (the force-directed graph, tooltip,
-legends, query panel), `colors.js` (the ONE herdr-verified agent-status→colour
-table, also imported directly by `test/colors.test.ts`), `jira-status.js`
-(the Jira-status→border table, FACTORY-900/FACTORY-939 — also imported
-directly by `test/jira-status.test.ts`), `shapes.js` (the type→shape mapping,
+legends, query panel), `colors.js` (the ONE agent-status→colour table,
+FACTORY-944's recolour, also imported directly by `test/colors.test.ts`),
+`jira-status.js` (the Jira-status→border table, FACTORY-900/FACTORY-939/
+FACTORY-944 — also imported directly by `test/jira-status.test.ts`), `shapes.js` (the type→shape mapping,
 see below, PLUS the Jira-status border decision — `borderForNode`, FACTORY-939,
 retiring FACTORY-900's `agent-ring.js` — also imported directly by
 `test/shapes.test.ts`), `colorblind.js` (the protanopia/deuteranopia/tritanopia
@@ -138,31 +138,42 @@ colour-blind-safe. The mapping (`public/shapes.js`):
 | other/unknown Jira type| rounded square  | mid               |
 | any non-Jira provider  | star            | mid               |
 
-**Fill is the node's agent status** (`public/colors.js`, unchanged since
-FACTORY-841 — reverted here from FACTORY-900's inversion): butchr's five
-`agent:*` statuses each get their own herdr-verified colour, `none` gets a
-neutral grey, and a provider that cannot report status at all shares that
-same neutral but draws a dashed border instead of a solid one (see below) —
-"cannot report" and "reports none" read the same colour, distinguished only
-by that dash, never a second grey.
+**Fill is the node's agent status** (`public/colors.js`, recoloured by
+FACTORY-944/FACTORY-943 — reverted from FACTORY-900's inversion back in
+FACTORY-939, then Brooswit's own requested palette replaced the FACTORY-841
+herdr-verified table): Working = green, Blocked = red, Idle = yellow,
+Stalled = orange, `none` = neutral grey — defined per light/dark theme. A
+provider that cannot report status at all shares that same neutral but draws
+a dashed border instead of a solid one (see below) — "cannot report" and
+"reports none" read the same colour, distinguished only by that dash, never
+a second grey.
 
 **Border is the node's Jira workflow status** (`public/jira-status.js` for
 the colour table, `public/shapes.js`'s `borderForNode` for how it's drawn,
-FACTORY-939, retiring FACTORY-900's agent-status ring): drawn as the shape's
-OWN outline stroke (3-4px, opaque) rather than a separate ring element, so it
-composes with every shape, not just circular ones — To Do, Backlog (a
-muted/desaturated version of To Do), In Progress, In Review, and Done each
-get their own colour-blind-safe, Okabe-Ito-derived colour, defined per
-light/dark theme; a custom status falls back to its `statusCategory`
-(new/indeterminate/done), and a non-Jira or statusless node gets neutral
-grey. The border is dashed exactly when `colors.js`'s `outlineForNode` says
-the provider cannot report agent status (the same "none vs cannot-report"
-distinction the shape's own stroke drew pre-FACTORY-900, just Jira-coloured
-now instead of the plain `--node-stroke`). A project node (FACTORY-911) has
-no Jira workflow status of its own and draws no border at all — its shape
-stays plain. A sidebar legend shows all mappings (type → shape, agent status
-→ fill, Jira status → border), correct in light and dark themes — a
-different thing from the per-source grouping legend FACTORY-874 removed.
+recoloured by FACTORY-944/FACTORY-943 — retiring FACTORY-939's
+Okabe-Ito-derived set): drawn as the shape's OWN outline stroke (3-4px,
+opaque) rather than a separate ring element, so it composes with every
+shape, not just circular ones — To Do = black, Backlog = grey (a distinct
+shade from the non-Jira/statusless neutral grey below), In Progress = green,
+In Review = yellow, and Done = blue, defined per light/dark theme. Dark
+theme's near-black "To Do" is paired with a thin light hairline
+(`jiraBorderHairlineForNode`, drawn as a second, wider stroke underneath by
+`app.js`) so it still reads against the dark canvas, since a literal black
+cannot itself clear the usual contrast floor there. In Progress-on-Working
+and In Review-on-Idle are deliberately overlapping hues (green-on-green,
+yellow-on-yellow); each pair uses a visibly different shade so it stays
+colour-blind-distinguishable (pinned by `test/jira-status.test.ts`'s
+border-vs-fill adjacency tests). A custom status falls back to its
+`statusCategory` (new/indeterminate/done), and a non-Jira or statusless node
+gets its own neutral grey. The border is dashed exactly when `colors.js`'s
+`outlineForNode` says the provider cannot report agent status (the same
+"none vs cannot-report" distinction the shape's own stroke drew
+pre-FACTORY-900, just Jira-coloured now instead of the plain
+`--node-stroke`). A project node (FACTORY-911) has no Jira workflow status
+of its own and draws no border at all — its shape stays plain. A sidebar
+legend shows all mappings (type → shape, agent status → fill, Jira status →
+border), correct in light and dark themes — a different thing from the
+per-source grouping legend FACTORY-874 removed.
 
 **Node size** (`SEER_SIZE_EPIC`/`SEER_SIZE_BUG`/`SEER_SIZE_STORY`/
 `SEER_SIZE_BASE`, `src/config/env.ts`, FACTORY-913): a linear size
@@ -230,11 +241,10 @@ comments.)
   telling the author to name their user explicitly (an accountId or
   username) instead.
 
-The node-colour table (herdr's status→hex mapping, FACTORY-841 decision 5) is
-implemented in `public/colors.js` — verified against herdr's own
-`status_color` function and its default Catppuccin Mocha palette in a
-herdrdev/herdr checkout; herdr has no `stalled` counterpart at all, which is
-why that one entry is seer/butchr's own decision rather than a herdr value.
+The node-colour table is implemented in `public/colors.js` as light/dark
+theme tokens: Working = green, Blocked = red, Idle = yellow, Stalled =
+orange, `none` = neutral grey (FACTORY-944, Brooswit's requested palette,
+superseding the FACTORY-841 herdr-verified table this file used to mirror).
 
 ## The schemas
 
