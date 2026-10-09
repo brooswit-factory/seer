@@ -2,6 +2,7 @@
 import { readFileSync } from "node:fs";
 import { loadConfig } from "./config/loader.ts";
 import type { SeerConfig } from "./config/schema.ts";
+import { loadSizeConfig, loadLayoutConfig } from "./config/env.ts";
 import { parseGraph } from "./graph/validate.ts";
 import { collect } from "./collector/collect.ts";
 import { JiraProvider } from "./collector/jira.ts";
@@ -83,6 +84,8 @@ async function runServe() {
     refreshSeconds: config?.refreshSeconds ?? 30,
     fixtureGraph: loadFixtureGraph(),
     sanitizeError,
+    sizeConfig: loadSizeConfig(),
+    layoutConfig: loadLayoutConfig(),
   });
 
   startServer({ port: config?.port ?? 4173, graphCache });

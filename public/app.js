@@ -1,10 +1,38 @@
 import { colorForNode, outlineForNode, statusLabel, STATUS_COLORS, CANNOT_REPORT_COLOR } from "./colors.js";
 import { classifyQueryRecord, queryStatusLabel } from "./query-status.js";
-import { shapeForNode, sizeForNode, SHAPE_HEXAGON, SHAPE_ROUNDED_SQUARE } from "./shapes.js";
+import { shapeForNode, SHAPE_HEXAGON, SHAPE_ROUNDED_SQUARE } from "./shapes.js";
+import { scaledSizeForNode } from "./node-scale.js";
+import { computeFitTransform, shouldFit } from "./fit-view.js";
 
-const NODE_RADIUS = 9;
 const LABEL_MAX_CHARS = 22;
 const DEFAULT_REFRESH_SECONDS = 30;
+/** Collision-radius padding, px — same margin the pre-FACTORY-890 fixed collide radius (NODE_RADIUS + 4) used. */
+const COLLIDE_PADDING = 4;
+
+/**
+ * Fallbacks for the FACTORY-890 size/layout constants, used ONLY when `/graph.json` predates them
+ * (an old fixture, or a snapshot that bypassed `GraphCache`) — the live server always echoes its
+ * real `SEER_SIZE_BASE`/`SEER_SIZE_ACTIVE`/`SEER_LINK_DISTANCE`/`SEER_CHARGE`/`SEER_GRAVITY`
+ * (env-sourced, see `src/config/env.ts`) on every response, so these values are never the
+ * authoritative source in normal operation.
+ */
+const FALLBACK_SIZE_CONFIG = { base: 2, active: 8 };
+const FALLBACK_LAYOUT_CONFIG = { linkDistance: 40, charge: 120, gravity: 0.08 };
+
+function sizeConfigFromGraph(graph) {
+  return {
+    base: graph.sizeBase ?? FALLBACK_SIZE_CONFIG.base,
+    active: graph.sizeActive ?? FALLBACK_SIZE_CONFIG.active,
+  };
+}
+
+function layoutConfigFromGraph(graph) {
+  return {
+    linkDistance: graph.linkDistance ?? FALLBACK_LAYOUT_CONFIG.linkDistance,
+    charge: graph.charge ?? FALLBACK_LAYOUT_CONFIG.charge,
+    gravity: graph.gravity ?? FALLBACK_LAYOUT_CONFIG.gravity,
+  };
+}
 
 /** D3 has no builtin hexagon/rounded-square symbol type, so these two are drawn by hand using the same `{ draw(context, size) }` contract every builtin `d3.symbolXxx` implements. */
 const hexagonSymbol = {
@@ -48,16 +76,6 @@ const D3_SYMBOL_BY_SHAPE = {
   [SHAPE_ROUNDED_SQUARE]: roundedSquareSymbol,
 };
 
-function symbolPathForNode(node) {
-  const shape = shapeForNode(node);
-  const size = sizeForNode(node);
-  return d3.symbol().type(D3_SYMBOL_BY_SHAPE[shape]).size(size)();
-}
-
-function approxRadiusForNode(node) {
-  return Math.sqrt(sizeForNode(node) / Math.PI);
-}
-
 function truncateLabel(label) {
   if (label.length <= LABEL_MAX_CHARS) return label;
   return label.slice(0, LABEL_MAX_CHARS - 1) + "…";
@@ -98,6 +116,7 @@ async function main() {
   renderBanner(graph);
   renderShapeLegend();
   renderLegend();
+  renderSizeLegend(graph);
   renderQueries(graph.queries);
   const update = renderGraph(graph);
 
@@ -161,6 +180,17 @@ function renderLegend() {
   el.innerHTML = rows.join("");
 }
 
+/** Size legend (FACTORY-890): shows the server's actual SEER_SIZE_BASE/SEER_SIZE_ACTIVE, never hardcoded. */
+function renderSizeLegend(graph) {
+  const el = document.getElementById("size-legend");
+  const { base, active } = sizeConfigFromGraph(graph);
+  el.innerHTML = [
+    "<h2>Node size</h2>",
+    `<div class="legend-row"><span>${base}x — base size (every node)</span></div>`,
+    `<div class="legend-row"><span>${active}x — live agent (working, blocked, idle, or stalled; replaces the base multiplier, not stacked)</span></div>`,
+  ].join("");
+}
+
 function renderQueries(queries) {
   const el = document.getElementById("queries");
   const rows = ["<h2>Queries</h2>"];
@@ -197,13 +227,47 @@ function renderGraph(initialGraph) {
   const width = wrap.clientWidth;
   const height = wrap.clientHeight;
 
+  let sizeConfig = sizeConfigFromGraph(initialGraph);
+  let layoutConfig = layoutConfigFromGraph(initialGraph);
+  // Set once the user pans/zooms by hand (a real gesture, `event.sourceEvent` present) — an
+  // auto-fit (load, refresh, or the Fit button) never counts, since it drives the SAME zoom
+  // behaviour programmatically with no `sourceEvent`. COMPACT LAYOUT item 1: once true, a refresh
+  // keeps the user's own transform instead of re-fitting out from under them.
+  let userTransformed = false;
+
   const svg = d3.select("#graph").attr("width", width).attr("height", height);
   const root = svg.append("g");
-  svg.call(
-    d3.zoom().on("zoom", (event) => {
-      root.attr("transform", event.transform);
-    }),
-  );
+  const zoomBehavior = d3.zoom().on("zoom", (event) => {
+    root.attr("transform", event.transform);
+    if (event.sourceEvent) userTransformed = true;
+  });
+  svg.call(zoomBehavior);
+
+  function symbolPathForNode(node) {
+    const shape = shapeForNode(node);
+    const size = scaledSizeForNode(node, sizeConfig);
+    return d3.symbol().type(D3_SYMBOL_BY_SHAPE[shape]).size(size)();
+  }
+
+  function approxRadiusForNode(node) {
+    return Math.sqrt(scaledSizeForNode(node, sizeConfig) / Math.PI);
+  }
+
+  /** Re-fits the view to the current node positions, unless the user has since panned/zoomed by hand. */
+  function fit({ force = false } = {}) {
+    if (!shouldFit({ userTransformed, force })) return;
+    const points = nodes.map((d) => ({ x: d.x, y: d.y, r: approxRadiusForNode(d) }));
+    const { x, y, k } = computeFitTransform(points, width, height);
+    svg
+      .transition()
+      .duration(300)
+      .call(zoomBehavior.transform, d3.zoomIdentity.translate(x, y).scale(k));
+    // This transform is programmatic (no sourceEvent), but set explicitly anyway — this is the
+    // one place a user's prior pan/zoom is deliberately overridden (a `force`-d Fit click).
+    userTransformed = false;
+  }
+
+  document.getElementById("fit-button")?.addEventListener("click", () => fit({ force: true }));
 
   const defs = svg.append("defs");
   defs
@@ -230,10 +294,18 @@ function renderGraph(initialGraph) {
 
   const simulation = d3
     .forceSimulation(nodes)
-    .force("link", d3.forceLink(links).id((d) => d.id).distance(60))
-    .force("charge", d3.forceManyBody().strength(-180))
-    .force("center", d3.forceCenter(width / 2, height / 2))
-    .force("collide", d3.forceCollide(NODE_RADIUS + 4));
+    .force("link", d3.forceLink(links).id((d) => d.id).distance(layoutConfig.linkDistance))
+    .force("charge", d3.forceManyBody().strength(-layoutConfig.charge))
+    // Centering/gravity (COMPACT LAYOUT item 3): a per-node spring toward the centre, SEER_GRAVITY
+    // strength, so disconnected components drift together instead of spreading into empty space.
+    .force("x", d3.forceX(width / 2).strength(layoutConfig.gravity))
+    .force("y", d3.forceY(height / 2).strength(layoutConfig.gravity))
+    // Collision radius follows each node's OWN scaled size (COMPACT LAYOUT item 4) — a function,
+    // not the old fixed NODE_RADIUS + 4, so an 8x live-agent node pushes its neighbours away
+    // proportionally to how big it actually is drawn.
+    .force("collide", d3.forceCollide((d) => approxRadiusForNode(d) + COLLIDE_PADDING));
+
+  simulation.on("end", () => fit());
 
   function dragBehavior() {
     return d3
@@ -348,6 +420,13 @@ function renderGraph(initialGraph) {
   });
 
   function apply(graph) {
+    sizeConfig = sizeConfigFromGraph(graph);
+    layoutConfig = layoutConfigFromGraph(graph);
+    simulation.force("link").distance(layoutConfig.linkDistance);
+    simulation.force("charge").strength(-layoutConfig.charge);
+    simulation.force("x").x(width / 2).strength(layoutConfig.gravity);
+    simulation.force("y").y(height / 2).strength(layoutConfig.gravity);
+
     const incomingNodes = graph.nodes;
     const incomingIds = new Set(incomingNodes.map((n) => n.id));
 
@@ -393,6 +472,13 @@ function renderGraph(initialGraph) {
       // the starting point, so only genuinely new/affected nodes visibly move into place.
       simulation.alpha(Math.max(simulation.alpha(), 0.3)).restart();
     }
+
+    // FACTORY-897: re-fit on every apply(), not just when the simulation reheats and later fires
+    // "end". A status-only refresh (no nodes/links added/removed) never reheats the simulation,
+    // but a status flip can still change a node's drawn size (2x -> 8x), so without this a node
+    // can grow past the already-fitted viewport and stay there until the user clicks Fit. fit()
+    // self-guards on userTransformed, so this never overrides a user's own pan/zoom.
+    fit();
   }
 
   apply(initialGraph);
