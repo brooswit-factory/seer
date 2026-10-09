@@ -104,6 +104,22 @@ describe("validateGraph", () => {
     expect(zero?.error).not.toBe(failed?.error);
   });
 
+  test("accepts the FACTORY-875 live-serving fields (stale/staleSince/error/usingFixture/refreshSeconds) when present", () => {
+    const withLiveFields = {
+      ...base,
+      stale: true,
+      staleSince: "2026-01-01T00:00:00Z",
+      error: "Jira search failed (503)",
+      usingFixture: false,
+      refreshSeconds: 30,
+    };
+    expect(validateGraph(withLiveFields).valid).toBe(true);
+  });
+
+  test("the live-serving fields are optional — a plain collector snapshot without them still validates", () => {
+    expect(validateGraph(base).data?.stale).toBeUndefined();
+  });
+
   test("accepts a node with resourceType absent — backward compatible with old graph.json (FACTORY-876)", () => {
     expect(validateGraph(base).valid).toBe(true);
     expect(base.nodes[0]).not.toHaveProperty("resourceType");

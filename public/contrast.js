@@ -1,7 +1,7 @@
 // WCAG 2.x contrast-ratio calculator (relative luminance + the standard contrast formula), used
-// to check the shape-stroke tokens below against >= 4.5:1 in both themes (FACTORY-876 item 3).
-// Pure and DOM-free so it is directly testable; also usable from app.js if a run-time check is
-// ever wanted.
+// to check the node-stroke token below against >= 4.5:1 in both themes (FACTORY-876 item 3,
+// FACTORY-875's edge/arrowhead/node-stroke contrast rule). Pure and DOM-free so it is directly
+// testable; also usable from app.js if a run-time check is ever wanted.
 
 function srgbChannelToLinear(c) {
   const v = c / 255;
@@ -35,13 +35,12 @@ export function contrastRatio(hexA, hexB) {
 export const MIN_CONTRAST = 4.5;
 
 /**
- * seer's dark- and light-theme canvas backgrounds and shape-stroke colours (mirrored from
- * `public/style.css`'s `--bg` / `--shape-stroke` custom properties — FACTORY-873 owns the
- * canonical theme-token names; these are defined identically here per FACTORY-876's "if 873
- * hasn't merged, define identically and note a trivial conflict" instruction. See the PR
- * description for the expected conflict).
+ * seer's dark- and light-theme canvas backgrounds and node-stroke colours (mirrored from
+ * `public/style.css`'s `--bg` / `--node-stroke` custom properties — FACTORY-873 owns the
+ * canonical theme-token names; FACTORY-876's node shapes reuse that same token rather than
+ * introducing a separate one).
  */
 export const THEME_TOKENS = Object.freeze({
-  dark: { bg: "#1e1e2e", shapeStroke: "#cdd6f4" },
-  light: { bg: "#eff1f5", shapeStroke: "#4c4f69" },
+  dark: { bg: "#1e1e2e", nodeStroke: "#cdd6f4" },
+  light: { bg: "#eff1f5", nodeStroke: "#4c4f69" },
 });
