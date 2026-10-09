@@ -14,7 +14,9 @@ const EXPECTED = {
 
 describe("STATUS_COLORS", () => {
   test("matches the FACTORY-841 decision-5 / herdr-verified palette exactly", () => {
-    expect(STATUS_COLORS).toEqual(EXPECTED);
+    // `Object.freeze` in colors.js gives tsc literal-typed properties; widen the comparison
+    // value's type rather than loosen the source module's own typing.
+    expect(STATUS_COLORS).toEqual(EXPECTED as typeof STATUS_COLORS);
   });
 
   test("the five keys are exactly butchr's agent:* status family", () => {
