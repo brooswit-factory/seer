@@ -130,6 +130,7 @@ export async function collect(config: SeerConfig, providers: Record<string, Prov
     admissionWithheld: match.admissionWithheld,
     discovery,
     ...(match.resourceType !== undefined ? { resourceType: match.resourceType } : {}),
+    ...(match.jiraStatus !== undefined ? { jiraStatus: match.jiraStatus } : {}),
   }));
 
   return {

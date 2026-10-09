@@ -1,4 +1,4 @@
-import type { AgentStatus, EdgeKind } from "../graph/schema.ts";
+import type { AgentStatus, EdgeKind, JiraStatus } from "../graph/schema.ts";
 
 export interface ProviderLink {
   targetId: string;
@@ -16,6 +16,8 @@ export interface ProviderMatch {
   admissionWithheld: boolean;
   /** The kind of resource this is, e.g. a Jira issue type name, or a non-Jira provider's own value. Optional — absent means "other/unknown" to the viewer. */
   resourceType?: string;
+  /** The resource's Jira workflow status, name + category. Optional — absent on a non-Jira provider's match. */
+  jiraStatus?: JiraStatus;
   links: ProviderLink[];
 }
 

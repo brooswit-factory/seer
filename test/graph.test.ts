@@ -132,6 +132,23 @@ describe("validateGraph", () => {
     expect(result.data?.nodes[0]?.resourceType).toBe("Epic");
   });
 
+  test("accepts a node with jiraStatus absent — backward compatible with old graph.json (FACTORY-900)", () => {
+    expect(validateGraph(base).valid).toBe(true);
+    expect(base.nodes[0]).not.toHaveProperty("jiraStatus");
+  });
+
+  test("accepts a node with jiraStatus present", () => {
+    const withStatus = { ...base, nodes: [{ ...base.nodes[0], jiraStatus: { name: "In Review", category: "indeterminate" } }] };
+    const result = validateGraph(withStatus);
+    expect(result.valid).toBe(true);
+    expect(result.data?.nodes[0]?.jiraStatus).toEqual({ name: "In Review", category: "indeterminate" });
+  });
+
+  test("rejects an invalid jiraStatus.category value", () => {
+    const bad = { ...base, nodes: [{ ...base.nodes[0], jiraStatus: { name: "Weird", category: "nope" } }] };
+    expect(validateGraph(bad).valid).toBe(false);
+  });
+
   test("parseGraph returns the validated object (with defaults applied), not a cast of the input", () => {
     const withoutTruncated = {
       ...base,

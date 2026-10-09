@@ -1,4 +1,6 @@
-import { colorForNode, outlineForNode, statusLabel, STATUS_COLORS, CANNOT_REPORT_COLOR } from "./colors.js";
+import { statusLabel, STATUS_COLORS, CANNOT_REPORT_COLOR } from "./colors.js";
+import { jiraFillForNode, jiraStatusLabel, JIRA_STATUS_FILLS } from "./jira-status.js";
+import { agentRingForNode } from "./agent-ring.js";
 import { classifyQueryRecord, queryStatusLabel } from "./query-status.js";
 import { shapeForNode, SHAPE_HEXAGON, SHAPE_ROUNDED_SQUARE } from "./shapes.js";
 import { scaledSizeForNode } from "./node-scale.js";
@@ -8,6 +10,26 @@ const LABEL_MAX_CHARS = 22;
 const DEFAULT_REFRESH_SECONDS = 30;
 /** Collision-radius padding, px — same margin the pre-FACTORY-890 fixed collide radius (NODE_RADIUS + 4) used. */
 const COLLIDE_PADDING = 4;
+/**
+ * The link-discovered hollow dot's fixed radius (FACTORY-900 item 7, Brooswit: "the hollow dot
+ * in a node should be 1x") — deliberately NOT derived from `scaledSizeForNode`/SEER_SIZE_*: it
+ * marks discovery, not size, and must read identically on a base-size and a live-agent node.
+ */
+const DISCOVERY_DOT_RADIUS = 2.5;
+/** Gap (px) between a node's own shape stroke and its agent-status ring (FACTORY-900 item 3). */
+const AGENT_RING_GAP = 3;
+/**
+ * Gap (px) between the agent-status ring and the (older, FACTORY-855) admission-withheld ring —
+ * widened from the pre-FACTORY-900 `+4` to `+9` specifically so the two rings, now both present
+ * on an admission-withheld live-agent node, read as two distinct circles rather than one
+ * muddled double border (flagged by the reviewing epic, FACTORY-899 comment 31484 item 3).
+ */
+const ADMISSION_RING_GAP = 9;
+
+/** "light" | "dark", read live off the OS/browser preference — the Jira-status fill palette is a theme token pair (FACTORY-900 item 2), not a single hardcoded table. */
+function currentTheme() {
+  return typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
 
 /**
  * Fallbacks for the FACTORY-890 size/layout constants, used ONLY when `/graph.json` predates them
@@ -16,7 +38,7 @@ const COLLIDE_PADDING = 4;
  * (env-sourced, see `src/config/env.ts`) on every response, so these values are never the
  * authoritative source in normal operation.
  */
-const FALLBACK_SIZE_CONFIG = { base: 2, active: 8 };
+const FALLBACK_SIZE_CONFIG = { base: 1.5, active: 2 };
 const FALLBACK_LAYOUT_CONFIG = { linkDistance: 40, charge: 120, gravity: 0.08 };
 
 function sizeConfigFromGraph(graph) {
@@ -115,7 +137,8 @@ async function main() {
 
   renderBanner(graph);
   renderShapeLegend();
-  renderLegend();
+  renderFillLegend();
+  renderRingLegend();
   renderSizeLegend(graph);
   renderQueries(graph.queries);
   const update = renderGraph(graph);
@@ -159,23 +182,46 @@ function renderShapeLegend() {
   el.innerHTML = rows.join("");
 }
 
-function renderLegend() {
-  const el = document.getElementById("legend");
-  const rows = [];
-  rows.push("<h2>Status → colour</h2>");
+/** Jira status -> fill legend (FACTORY-900 item 4). Shows the CURRENT theme's actual hexes, not a hardcoded single table. */
+function renderFillLegend() {
+  const el = document.getElementById("fill-legend");
+  const fills = JIRA_STATUS_FILLS[currentTheme()];
+  const rows = ["<h2>Jira status → fill</h2>"];
+  const entries = [
+    ["To Do", fills.todo],
+    ["Backlog", fills.backlog],
+    ["In Progress", fills.inprogress],
+    ["In Review", fills.inreview],
+    ["Done", fills.done],
+    ["non-Jira / no Jira status", fills.neutral],
+  ];
+  for (const [label, hex] of entries) {
+    rows.push(`<div class="legend-row"><span class="swatch" style="background:${hex}"></span><span>${label}</span></div>`);
+  }
+  el.innerHTML = rows.join("");
+}
+
+/** Agent status -> ring legend (FACTORY-900 items 3-4): colours.js's herdr colours, unchanged, now shown as rings rather than fills. */
+function renderRingLegend() {
+  const el = document.getElementById("ring-legend");
+  const rows = ["<h2>Agent status → ring</h2>"];
   for (const [status, hex] of Object.entries(STATUS_COLORS)) {
+    if (status === "none") continue; // "none" draws NO ring — see the dedicated row below instead of a misleading swatch.
     rows.push(
-      `<div class="legend-row"><span class="swatch" style="background:${hex}"></span><span>${status}</span></div>`,
+      `<div class="legend-row"><span class="ring-swatch" style="border-color:${hex}"></span><span>${status}</span></div>`,
     );
   }
   rows.push(
-    `<div class="legend-row"><span class="swatch dashed" style="background:${CANNOT_REPORT_COLOR};border-color:${CANNOT_REPORT_COLOR}"></span><span>cannot report status (same neutral as "none", dashed outline)</span></div>`,
+    `<div class="legend-row"><span class="ring-swatch" style="border:none"></span><span>none (no live agent) — no ring</span></div>`,
   );
   rows.push(
-    `<div class="legend-row"><span class="swatch" style="background:none;border:2px dashed #fab387"></span><span>admission withheld (ring overlay, never a fill)</span></div>`,
+    `<div class="legend-row"><span class="ring-swatch dashed" style="border-color:${CANNOT_REPORT_COLOR}"></span><span>cannot report status — thin dashed neutral ring</span></div>`,
   );
   rows.push(
-    `<div class="legend-row"><span style="width:14px;text-align:center">○</span><span>hollow dot in a node = link-discovered (no query matched it directly)</span></div>`,
+    `<div class="legend-row"><span class="swatch" style="background:none;border:2px dashed #fab387"></span><span>admission withheld (a second, wider ring overlay, never a fill)</span></div>`,
+  );
+  rows.push(
+    `<div class="legend-row"><span style="width:14px;text-align:center">○</span><span>hollow dot in a node = link-discovered (no query matched it directly); fixed size, never scales with the node</span></div>`,
   );
   el.innerHTML = rows.join("");
 }
@@ -301,7 +347,7 @@ function renderGraph(initialGraph) {
     .force("x", d3.forceX(width / 2).strength(layoutConfig.gravity))
     .force("y", d3.forceY(height / 2).strength(layoutConfig.gravity))
     // Collision radius follows each node's OWN scaled size (COMPACT LAYOUT item 4) — a function,
-    // not the old fixed NODE_RADIUS + 4, so an 8x live-agent node pushes its neighbours away
+    // not the old fixed NODE_RADIUS + 4, so a live-agent node pushes its neighbours away
     // proportionally to how big it actually is drawn.
     .force("collide", d3.forceCollide((d) => approxRadiusForNode(d) + COLLIDE_PADDING));
 
@@ -332,6 +378,7 @@ function renderGraph(initialGraph) {
       <dt>provider</dt><dd>${escapeHtml(d.provider)}</dd>
       <dt>id</dt><dd>${escapeHtml(d.id)}</dd>
       <dt>type</dt><dd>${escapeHtml(d.resourceType ?? "unknown")}</dd>
+      <dt>jira status</dt><dd>${escapeHtml(jiraStatusLabel(d))}</dd>
       <dt>status</dt><dd>${escapeHtml(statusLabel(d))}</dd>
       <dt>discovery</dt><dd>${d.discovery === "query" ? "query hit" : "link-discovered"}</dd>
       <dt>link</dt><dd><a href="${d.url}" target="_blank" rel="noopener">${escapeHtml(d.url)}</a></dd>
@@ -349,8 +396,8 @@ function renderGraph(initialGraph) {
     sel.exit().remove();
 
     const entered = sel.enter().append("g").attr("class", "node").call(dragBehavior());
-    // Shape carries resource type (FACTORY-876 item 3); fill stays agent-status colour from
-    // colors.js, unchanged — type is never encoded in hue.
+    // Shape carries resource type (FACTORY-876 item 3); fill is Jira status, agent status moved
+    // to the ring below (FACTORY-900) — type is never encoded in hue either way.
     entered
       .append("path")
       .attr("class", "node-shape")
@@ -361,38 +408,55 @@ function renderGraph(initialGraph) {
 
     const merged = entered.merge(sel);
 
-    // Re-run on every refresh, not just on enter: a node whose resourceType (or anything else
-    // shape-relevant) changed needs its path/size/label offset to follow, in place.
+    // Re-run on every refresh, not just on enter: a node whose resourceType/jiraStatus (or
+    // anything else shape/fill-relevant) changed needs its path/size/fill/label offset to
+    // follow, in place.
     merged
       .select("path.node-shape")
       .attr("d", (d) => symbolPathForNode(d))
-      .attr("fill", (d) => colorForNode(d))
-      .attr("stroke-dasharray", (d) => (outlineForNode(d) === "dashed" ? "3,2" : null));
+      .attr("fill", (d) => jiraFillForNode(d, currentTheme()));
     merged
       .select("text.node-label")
       .attr("dy", (d) => approxRadiusForNode(d) + 12)
       .text((d) => truncateLabel(d.label));
 
-    // discovery dot and admission ring are presence-toggled per node, not just styled, since
-    // whether a node has one can change between refreshes (e.g. it starts matching a query).
-    // Their radius is re-derived every pass too, since a node's shape/size can change underneath
-    // an existing ring.
+    // Agent-status ring, admission ring, and the discovery dot are all presence-toggled per
+    // node, not just styled, since whether a node has one can change between refreshes (e.g. it
+    // starts matching a query, or its agent status flips to/from "none"). Radii are re-derived
+    // every pass too, since a node's shape/size can change underneath an existing ring. Insertion
+    // order (always before "text") puts the discovery dot on top of both rings, per FACTORY-900
+    // item 7 ("visible on top of the fill and inside the ring").
     merged.each(function (d) {
       const g = d3.select(this);
-      const hasDot = !g.select("circle.discovery-dot").empty();
-      if (d.discovery === "link" && !hasDot) {
-        g.insert("circle", "text").attr("class", "discovery-dot").attr("r", 2.5).attr("fill", "#1e1e2e");
-      } else if (d.discovery !== "link" && hasDot) {
-        g.select("circle.discovery-dot").remove();
+      const radius = approxRadiusForNode(d);
+
+      const ring = agentRingForNode(d);
+      let ringEl = g.select("circle.agent-ring");
+      if (ring.visible) {
+        if (ringEl.empty()) ringEl = g.insert("circle", "text").attr("class", "agent-ring").attr("fill", "none");
+        ringEl
+          .attr("r", radius + AGENT_RING_GAP)
+          .attr("stroke", ring.stroke)
+          .attr("stroke-width", ring.width)
+          .attr("stroke-dasharray", ring.dashed ? "2,2" : null);
+      } else if (!ringEl.empty()) {
+        ringEl.remove();
       }
 
-      const hasRing = !g.select("circle.admission-ring").empty();
-      if (d.admissionWithheld && !hasRing) {
-        g.insert("circle", "text").attr("class", "admission-ring").attr("r", approxRadiusForNode(d) + 4);
-      } else if (!d.admissionWithheld && hasRing) {
+      const hasAdmissionRing = !g.select("circle.admission-ring").empty();
+      if (d.admissionWithheld && !hasAdmissionRing) {
+        g.insert("circle", "text").attr("class", "admission-ring").attr("r", radius + ADMISSION_RING_GAP);
+      } else if (!d.admissionWithheld && hasAdmissionRing) {
         g.select("circle.admission-ring").remove();
-      } else if (d.admissionWithheld && hasRing) {
-        g.select("circle.admission-ring").attr("r", approxRadiusForNode(d) + 4);
+      } else if (d.admissionWithheld && hasAdmissionRing) {
+        g.select("circle.admission-ring").attr("r", radius + ADMISSION_RING_GAP);
+      }
+
+      const hasDot = !g.select("circle.discovery-dot").empty();
+      if (d.discovery === "link" && !hasDot) {
+        g.insert("circle", "text").attr("class", "discovery-dot").attr("r", DISCOVERY_DOT_RADIUS).attr("fill", "#1e1e2e");
+      } else if (d.discovery !== "link" && hasDot) {
+        g.select("circle.discovery-dot").remove();
       }
     });
 
@@ -475,7 +539,7 @@ function renderGraph(initialGraph) {
 
     // FACTORY-897: re-fit on every apply(), not just when the simulation reheats and later fires
     // "end". A status-only refresh (no nodes/links added/removed) never reheats the simulation,
-    // but a status flip can still change a node's drawn size (2x -> 8x), so without this a node
+    // but a status flip can still change a node's drawn size (base -> active), so without this a node
     // can grow past the already-fitted viewport and stay there until the user clicks Fit. fit()
     // self-guards on userTransformed, so this never overrides a user's own pan/zoom.
     fit();

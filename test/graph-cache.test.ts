@@ -162,8 +162,8 @@ describe("GraphCache", () => {
 
     const result = await cache.getGraph();
 
-    expect(result.sizeBase).toBe(2);
-    expect(result.sizeActive).toBe(8);
+    expect(result.sizeBase).toBe(1.5);
+    expect(result.sizeActive).toBe(2);
     expect(result.linkDistance).toBe(40);
     expect(result.charge).toBe(120);
     expect(result.gravity).toBe(0.08);

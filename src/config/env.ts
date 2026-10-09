@@ -32,11 +32,18 @@ function readPositiveEnvNumber(name: string, defaultValue: number): number {
   return value;
 }
 
-/** SEER_SIZE_BASE / SEER_SIZE_ACTIVE, defaulting to the values the ticket names (2 / 8). */
+/**
+ * SEER_SIZE_BASE / SEER_SIZE_ACTIVE, defaulting to 1.5 / 2 (FACTORY-900 item 6, latest revision —
+ * supersedes FACTORY-890's original 2 / 8, and this ticket's own earlier 2/4 and 1.5/3 notes).
+ * Decimal values > 0 are valid (`readPositiveEnvNumber` only rejects non-numeric, NaN, zero, and
+ * negative); these are settings, not constants — the director has tweaked them repeatedly. With
+ * active only ~1.33x base, the shape size barely signals "live agent" any more — the
+ * agent-status ring (public/agent-ring.js) is now what carries that, per the director's own note.
+ */
 export function loadSizeConfig(): SizeConfig {
   return {
-    base: readPositiveEnvNumber("SEER_SIZE_BASE", 2),
-    active: readPositiveEnvNumber("SEER_SIZE_ACTIVE", 8),
+    base: readPositiveEnvNumber("SEER_SIZE_BASE", 1.5),
+    active: readPositiveEnvNumber("SEER_SIZE_ACTIVE", 2),
   };
 }
 

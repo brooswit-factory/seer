@@ -87,19 +87,25 @@ JIRA_BASE_URL=https://yoursite.atlassian.net JIRA_EMAIL=you@example.com JIRA_API
 
 `public/` is a plain static page (D3 loaded from a CDN `<script>` tag, no
 bundler): `index.html`, `app.js` (the force-directed graph, tooltip,
-legends, query panel), `colors.js` (the ONE herdr-verified status→colour
-table, also imported directly by `test/colors.test.ts`), `shapes.js` (the
-type→shape mapping, see below — also imported directly by
-`test/shapes.test.ts`), `contrast.js` (a small WCAG contrast-ratio
-calculator, imported directly by `test/contrast.test.ts`), and
+legends, query panel), `colors.js` (the ONE herdr-verified agent-status→colour
+table, also imported directly by `test/colors.test.ts`), `jira-status.js`
+(the Jira-status→fill table, FACTORY-900 — also imported directly by
+`test/jira-status.test.ts`), `agent-ring.js` (decides the agent-status ring's
+visibility/colour/width/dash from `colors.js`, unchanged — also imported
+directly by `test/agent-ring.test.ts`), `colorblind.js` (the
+protanopia/deuteranopia/tritanopia simulation `test/jira-status.test.ts`
+checks the fill palette against), `shapes.js` (the type→shape mapping, see
+below — also imported directly by `test/shapes.test.ts`), `node-scale.js`
+(the size-multiplier table, FACTORY-890), `contrast.js` (a small WCAG
+contrast-ratio calculator, imported directly by `test/contrast.test.ts`), and
 `query-status.js` (classifies a query record as ok / zero-match / failed /
 truncated — also imported directly by its test).
 
-**Node shape = resource type, fill = agent status (FACTORY-876).** Each node
-is drawn as a D3 symbol whose *shape* is a pure function of its
-`resourceType` (and, for the Jira/non-Jira split, its `provider`) —
-never its hue, so the graph stays colour-blind-safe. The mapping
-(`public/shapes.js`):
+**Node shape = resource type, fill = Jira status, ring = agent status
+(FACTORY-876, FACTORY-900).** Each node is drawn as a D3 symbol whose
+*shape* is a pure function of its `resourceType` (and, for the Jira/non-Jira
+split, its `provider`) — never its hue, so the graph stays colour-blind-safe.
+The mapping (`public/shapes.js`):
 
 | Resource type         | Shape           | Size tier         |
 |------------------------|-----------------|-------------------|
@@ -111,10 +117,33 @@ never its hue, so the graph stays colour-blind-safe. The mapping
 | other/unknown Jira type| rounded square  | mid               |
 | any non-Jira provider  | star            | mid               |
 
-Fill colour is still the agent-status table in `colors.js`, completely
-unchanged. A sidebar legend shows both mappings (type → shape, status →
-colour), correct in light and dark themes — a different thing from the
-per-source grouping legend FACTORY-874 removed.
+**Fill is the node's Jira workflow status** (`public/jira-status.js`,
+FACTORY-900): To Do, Backlog (a muted/desaturated version of To Do), In
+Progress, In Review, and Done each get their own colour-blind-safe,
+Okabe-Ito-derived fill, defined per light/dark theme; a custom status falls
+back to its `statusCategory` (new/indeterminate/done), and a non-Jira or
+statusless node gets neutral grey. **Agent status moved OFF the fill and
+onto a thick ring** drawn outside it (`public/agent-ring.js`) — still
+`colors.js`'s herdr colours, completely unchanged, just painted somewhere
+else; `none` draws no ring at all, and "cannot report status" draws a thin
+dashed neutral ring (the same "none vs cannot-report" distinction
+`colors.js`'s own `outlineForNode` always drew, just moved from the shape's
+own stroke to the ring). A sidebar legend shows all three mappings (type →
+shape, Jira status → fill, agent status → ring), correct in light and dark
+themes — a different thing from the per-source grouping legend FACTORY-874
+removed.
+
+**Node size** (`SEER_SIZE_BASE`/`SEER_SIZE_ACTIVE`, `src/config/env.ts`,
+FACTORY-890/FACTORY-900): a linear size multiplier applied to every node's
+per-type base size (`public/node-scale.js`), `active` REPLACING `base`
+(never stacked) for a live-agent node. Defaults are 1.5 / 2 — settings, not
+constants, tweaked more than once already; any positive decimal is valid
+(zero, negative, NaN, and non-numeric are rejected). The server always
+echoes its real configured values on `/graph.json` (`sizeBase`/
+`sizeActive`), and the viewer's size legend reads them from there rather
+than hardcoding a number. The link-discovered hollow dot
+(`circle.discovery-dot`) is a fixed `DISCOVERY_DOT_RADIUS` regardless of
+either multiplier — it marks discovery, not size.
 
 Shape strokes use the `--shape-stroke` CSS custom property
 (`public/style.css`), chosen to meet WCAG contrast ≥ 4.5:1 against `--bg` in
@@ -191,10 +220,13 @@ code imports types rather than redeclaring them.
   (`providerCanReportStatus` — distinguishes "cannot report" from "reports
   none"), whether an admission-withheld marker is present, `discovery`
   (`"query" | "link"` — whether a source's query matched this node directly
-  or it was only reached by link expansion), and an OPTIONAL `resourceType`
+  or it was only reached by link expansion), an OPTIONAL `resourceType`
   (the Jira issue type name, or a non-Jira provider's own value — absent on
   old data, which still validates; see "The viewer" above for how the
-  viewer renders it as a shape). Per edge: source id, target id,
+  viewer renders it as a shape), and an OPTIONAL `jiraStatus`
+  (`{ name, category }`, `category` one of `new | indeterminate | done` —
+  FACTORY-900; absent on old data and non-Jira nodes, which still validate;
+  see "The viewer" above for how it renders as a fill). Per edge: source id, target id,
   and a small closed `kind` enum (`implements | blocks | relates | parent |
   link`); edges must reference existing node ids. Top-level: a schema
   version, an ISO-8601 snapshot timestamp, the nodes and edges, a per-query

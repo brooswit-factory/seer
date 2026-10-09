@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { JIRA_RESOURCE_TYPE_SHAPES, sizeForNode } from "../public/shapes.js";
 import { isLiveAgentNode, scaledSizeForNode, sizeMultiplierForNode } from "../public/node-scale.js";
 
-const SIZE_CONFIG = { base: 2, active: 8 };
+const SIZE_CONFIG = { base: 1.5, active: 2 };
 
 const RESOURCE_TYPES = [...Object.keys(JIRA_RESOURCE_TYPE_SHAPES), undefined /* other/unknown */];
 const AGENT_STATUSES = ["working", "idle", "blocked", "stalled", "none"];
@@ -38,7 +38,7 @@ describe("sizeMultiplierForNode / scaledSizeForNode: table-driven over every sta
       const live = ["working", "idle", "blocked", "stalled"].includes(agentStatus);
       const label = `${resourceType ?? "other/unknown"} x ${agentStatus}`;
 
-      test(`${label}: multiplier is ${live ? "active (8x)" : "base (2x)"}, never stacked`, () => {
+      test(`${label}: multiplier is ${live ? "active (2x)" : "base (1.5x)"}, never stacked`, () => {
         const n = node(resourceType, agentStatus);
         const expectedMultiplier = live ? SIZE_CONFIG.active : SIZE_CONFIG.base;
         expect(sizeMultiplierForNode(n, SIZE_CONFIG)).toBe(expectedMultiplier);
@@ -47,7 +47,7 @@ describe("sizeMultiplierForNode / scaledSizeForNode: table-driven over every sta
         const expectedArea = sizeForNode(n) * expectedMultiplier * expectedMultiplier;
         expect(scaledSizeForNode(n, SIZE_CONFIG)).toBe(expectedArea);
 
-        // "8x" replaces "2x" — it is never 2x stacked with 8x (16x).
+        // "active" replaces "base" — it is never base stacked with active.
         if (live) {
           expect(scaledSizeForNode(n, SIZE_CONFIG)).not.toBe(sizeForNode(n) * SIZE_CONFIG.base * SIZE_CONFIG.active);
         }
