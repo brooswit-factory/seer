@@ -118,7 +118,7 @@ directly by `test/agent-ring.test.ts`), `colorblind.js` (the
 protanopia/deuteranopia/tritanopia simulation `test/jira-status.test.ts`
 checks the fill palette against), `shapes.js` (the type→shape mapping, see
 below — also imported directly by `test/shapes.test.ts`), `node-scale.js`
-(the size-multiplier table, FACTORY-890), `contrast.js` (a small WCAG
+(the size-multiplier table, FACTORY-913), `contrast.js` (a small WCAG
 contrast-ratio calculator, imported directly by `test/contrast.test.ts`), and
 `query-status.js` (classifies a query record as ok / zero-match / failed /
 truncated — also imported directly by its test).
@@ -155,17 +155,25 @@ shape, Jira status → fill, agent status → ring), correct in light and dark
 themes — a different thing from the per-source grouping legend FACTORY-874
 removed.
 
-**Node size** (`SEER_SIZE_BASE`/`SEER_SIZE_ACTIVE`, `src/config/env.ts`,
-FACTORY-890/FACTORY-900): a linear size multiplier applied to every node's
-per-type base size (`public/node-scale.js`), `active` REPLACING `base`
-(never stacked) for a live-agent node. Defaults are 1.5 / 2 — settings, not
-constants, tweaked more than once already; any positive decimal is valid
-(zero, negative, NaN, and non-numeric are rejected). The server always
-echoes its real configured values on `/graph.json` (`sizeBase`/
-`sizeActive`), and the viewer's size legend reads them from there rather
-than hardcoding a number. The link-discovered hollow dot
-(`circle.discovery-dot`) is a fixed `DISCOVERY_DOT_RADIUS` regardless of
-either multiplier — it marks discovery, not size.
+**Node size** (`SEER_SIZE_EPIC`/`SEER_SIZE_BUG`/`SEER_SIZE_STORY`/
+`SEER_SIZE_BASE`, `src/config/env.ts`, FACTORY-913): a linear size
+multiplier applied to every node's per-type base size
+(`public/node-scale.js`), one setting per Jira resource type that gets its
+own tier (Epic, Bug, Story) and `base` for everything else (Task, Sub-task,
+any other/unknown Jira issue type, and every non-Jira provider node).
+REPLACES FACTORY-890/900's single `SEER_SIZE_BASE`/`SEER_SIZE_ACTIVE` pair —
+a live agent is now signalled ONLY by the agent-status ring
+(`public/agent-ring.js`), never by node size; if `SEER_SIZE_ACTIVE` is still
+set in the environment, the server logs one startup warning and otherwise
+ignores it. Defaults are `SEER_SIZE_EPIC=3`, `SEER_SIZE_BUG=3`,
+`SEER_SIZE_STORY=2`, `SEER_SIZE_BASE=1.5` — settings, not constants, tweaked
+more than once already; any positive decimal is valid (zero, negative, NaN,
+and non-numeric are rejected). The server always echoes its real configured
+values on `/graph.json` (`sizeEpic`/`sizeBug`/`sizeStory`/`sizeBase`), and
+the viewer's size legend reads them from there rather than hardcoding a
+number. The link-discovered hollow dot (`circle.discovery-dot`) is a fixed
+`DISCOVERY_DOT_RADIUS` regardless of any multiplier — it marks discovery,
+not size.
 
 Shape strokes use the `--shape-stroke` CSS custom property
 (`public/style.css`), chosen to meet WCAG contrast ≥ 4.5:1 against `--bg` in

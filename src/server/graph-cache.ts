@@ -3,7 +3,7 @@ import { parseGraph } from "../graph/validate.ts";
 import type { LayoutConfig, SizeConfig } from "../config/env.ts";
 
 /** Matches `loadSizeConfig()`'s own defaults — used only when a caller (e.g. a test) omits `sizeConfig`. */
-const DEFAULT_SIZE_CONFIG: SizeConfig = { base: 1.5, active: 2 };
+const DEFAULT_SIZE_CONFIG: SizeConfig = { epic: 3, bug: 3, story: 2, base: 1.5 };
 /** Matches `loadLayoutConfig()`'s own defaults — used only when a caller omits `layoutConfig`. */
 const DEFAULT_LAYOUT_CONFIG: LayoutConfig = { linkDistance: 40, charge: 120, gravity: 0.08 };
 
@@ -135,8 +135,10 @@ export class GraphCache {
       ...graph,
       ...meta,
       refreshSeconds: this.options.refreshSeconds,
+      sizeEpic: this.sizeConfig.epic,
+      sizeBug: this.sizeConfig.bug,
+      sizeStory: this.sizeConfig.story,
       sizeBase: this.sizeConfig.base,
-      sizeActive: this.sizeConfig.active,
       linkDistance: this.layoutConfig.linkDistance,
       charge: this.layoutConfig.charge,
       gravity: this.layoutConfig.gravity,

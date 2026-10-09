@@ -1,11 +1,11 @@
-// Node-size multiplier decision for FACTORY-890. A pure, DOM/D3-free module (same contract as
-// shapes.js) so the (agentStatus x resourceType) size table is testable without a browser.
+// Node-size multiplier decision for FACTORY-913. A pure, DOM/D3-free module (same contract as
+// shapes.js) so the (resourceType x sizeConfig) table is testable without a browser.
 //
-// Decision: `sizeActive` REPLACES `sizeBase` for a live-agent node — it is NOT stacked on top of
-// it (manager-factory's confirmed reading of "8x": active nodes are 8x today's per-type size,
-// not 16x). "Live agent" means the provider can report status AND that status is one of
-// working/blocked/idle/stalled; `agentStatus: "none"` (which also covers butchr's "shelved"
-// label) and `providerCanReportStatus: false` both keep the base multiplier.
+// REPLACES FACTORY-890/900's (agentStatus x resourceType) table: live agents are now shown ONLY
+// by the agent-status ring (agent-ring.js) — node size no longer bumps for a live agent at all.
+// Instead, each of three Jira issue types that gets its own setting (Epic, Bug, Story) scales by
+// its own configured multiplier; every other node — Task, Sub-task, any other/unknown Jira issue
+// type, and every non-Jira provider node — scales by `sizeConfig.base`.
 //
 // The multipliers apply to the LINEAR size (radius/side), per the ticket. `sizeForNode` (from
 // shapes.js) returns an AREA in d3-symbol units, so scaling the linear size by `m` scales that
@@ -13,16 +13,26 @@
 
 import { sizeForNode } from "./shapes.js";
 
-export const LIVE_AGENT_STATUSES = Object.freeze(["working", "blocked", "idle", "stalled"]);
+/** Jira issue-type name -> the `sizeConfig` key that type's multiplier lives under. Absent for every type that falls through to `base`. */
+const SIZE_CONFIG_KEY_BY_RESOURCE_TYPE = Object.freeze({
+  Epic: "epic",
+  Bug: "bug",
+  Story: "story",
+});
 
-/** Whether a node has a live agent — the condition that earns the `active` multiplier instead of `base`. */
-export function isLiveAgentNode(node) {
-  return Boolean(node?.providerCanReportStatus) && LIVE_AGENT_STATUSES.includes(node?.agentStatus);
+function isJiraProvider(provider) {
+  return typeof provider === "string" && provider.toLowerCase().startsWith("jira");
 }
 
-/** The linear-size multiplier for a node: `sizeConfig.active` for a live agent, `sizeConfig.base` otherwise. */
+/**
+ * The linear-size multiplier for a node: `sizeConfig.epic`/`bug`/`story` for a Jira node of that
+ * resource type, `sizeConfig.base` for everything else — Task, Sub-task, any other/unknown Jira
+ * issue type, and every non-Jira provider node (whose own free-form `resourceType` never keys
+ * into this table, matching `shapes.js`'s Jira/non-Jira split).
+ */
 export function sizeMultiplierForNode(node, sizeConfig) {
-  return isLiveAgentNode(node) ? sizeConfig.active : sizeConfig.base;
+  const key = isJiraProvider(node?.provider) && node?.resourceType ? SIZE_CONFIG_KEY_BY_RESOURCE_TYPE[node.resourceType] : undefined;
+  return sizeConfig[key ?? "base"];
 }
 
 /** The node's final area (d3-symbol units): its per-type base area (shapes.js) scaled by the squared linear multiplier. */

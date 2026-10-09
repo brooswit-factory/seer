@@ -1,25 +1,36 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { loadSizeConfig, loadLayoutConfig } from "../src/config/env.ts";
 import { ConfigError } from "../src/config/loader.ts";
 
-const ENV_KEYS = ["SEER_SIZE_BASE", "SEER_SIZE_ACTIVE", "SEER_LINK_DISTANCE", "SEER_CHARGE", "SEER_GRAVITY"];
+const ENV_KEYS = [
+  "SEER_SIZE_BASE",
+  "SEER_SIZE_EPIC",
+  "SEER_SIZE_BUG",
+  "SEER_SIZE_STORY",
+  "SEER_SIZE_ACTIVE",
+  "SEER_LINK_DISTANCE",
+  "SEER_CHARGE",
+  "SEER_GRAVITY",
+];
 
 afterEach(() => {
   for (const key of ENV_KEYS) delete process.env[key];
 });
 
 describe("loadSizeConfig", () => {
-  test("defaults to base=1.5, active=2 when unset (FACTORY-900 item 6, latest revision)", () => {
-    expect(loadSizeConfig()).toEqual({ base: 1.5, active: 2 });
+  test("defaults to epic=3, bug=3, story=2, base=1.5 when unset (FACTORY-913)", () => {
+    expect(loadSizeConfig()).toEqual({ epic: 3, bug: 3, story: 2, base: 1.5 });
   });
 
-  test("reads valid env overrides", () => {
-    process.env.SEER_SIZE_BASE = "3";
-    process.env.SEER_SIZE_ACTIVE = "9.5";
-    expect(loadSizeConfig()).toEqual({ base: 3, active: 9.5 });
+  test("reads valid env overrides for every setting", () => {
+    process.env.SEER_SIZE_EPIC = "4";
+    process.env.SEER_SIZE_BUG = "3.5";
+    process.env.SEER_SIZE_STORY = "2.25";
+    process.env.SEER_SIZE_BASE = "1.75";
+    expect(loadSizeConfig()).toEqual({ epic: 4, bug: 3.5, story: 2.25, base: 1.75 });
   });
 
-  test("accepts a decimal value > 0 (FACTORY-900: 1.5 must pass)", () => {
+  test("accepts a decimal value > 0 (1.5 must pass)", () => {
     process.env.SEER_SIZE_BASE = "1.5";
     expect(loadSizeConfig().base).toBe(1.5);
   });
@@ -33,14 +44,48 @@ describe("loadSizeConfig", () => {
     }
   });
 
-  test("rejects a non-positive SEER_SIZE_ACTIVE", () => {
-    process.env.SEER_SIZE_ACTIVE = "-8";
-    expect(() => loadSizeConfig()).toThrow(/SEER_SIZE_ACTIVE/);
-  });
+  test.each(["SEER_SIZE_EPIC", "SEER_SIZE_BUG", "SEER_SIZE_STORY", "SEER_SIZE_BASE"])(
+    "rejects a non-positive %s",
+    (key) => {
+      process.env[key] = "-8";
+      expect(() => loadSizeConfig()).toThrow(new RegExp(key));
+    },
+  );
 
   test("rejects NaN", () => {
-    process.env.SEER_SIZE_ACTIVE = "NaN";
+    process.env.SEER_SIZE_EPIC = "NaN";
     expect(() => loadSizeConfig()).toThrow(ConfigError);
+  });
+
+  describe("SEER_SIZE_ACTIVE (removed FACTORY-913 setting)", () => {
+    let warnSpy: typeof console.warn;
+    let warnCalls: unknown[][];
+
+    beforeEach(() => {
+      warnCalls = [];
+      warnSpy = console.warn;
+      console.warn = (...args: unknown[]) => warnCalls.push(args);
+    });
+    afterEach(() => {
+      console.warn = warnSpy;
+    });
+
+    test("has no effect on the resolved config, but logs one startup warning when set", () => {
+      process.env.SEER_SIZE_ACTIVE = "9.5";
+      const config = loadSizeConfig();
+      expect(config).toEqual({ epic: 3, bug: 3, story: 2, base: 1.5 });
+      expect(warnCalls).toEqual([["SEER_SIZE_ACTIVE is no longer used"]]);
+    });
+
+    test("does not warn when unset", () => {
+      loadSizeConfig();
+      expect(warnCalls).toEqual([]);
+    });
+
+    test("does not fail even on a value that would otherwise be invalid", () => {
+      process.env.SEER_SIZE_ACTIVE = "not-a-number";
+      expect(() => loadSizeConfig()).not.toThrow();
+    });
   });
 });
 
