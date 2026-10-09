@@ -1,12 +1,44 @@
+/*
+ * Theme tokens (FACTORY-875): both a light and a dark palette, switched automatically by
+ * `prefers-color-scheme`. `--edge`, `--arrowhead` and `--node-stroke` are the three tokens the
+ * edge/arrowhead/node-stroke contrast rule applies to — named so a later story (node shape per
+ * resource type) can reuse them for its own strokes. test/contrast.test.ts reads THIS FILE
+ * directly (regex-extracting these custom properties) and computes their WCAG contrast ratio
+ * against `--bg` for both themes, so these values are the single source of truth: changing one
+ * here is what the test checks, not a second copy to keep in sync by hand.
+ *
+ * Light-theme contrast (computed, see test/contrast.test.ts): edge/arrowhead/node-stroke
+ * #4c4f69 vs bg #eff1f5 = 7.06:1.
+ * Dark-theme contrast: edge/arrowhead/node-stroke #cdd6f4 vs bg #1e1e2e = 11.35:1.
+ * Both clear the required 4.5:1.
+ */
 :root {
-  color-scheme: dark;
-  --bg: #1e1e2e;
-  --fg: #cdd6f4;
-  --panel: #181825;
-  --border: #313244;
-  --muted: #a6adc8;
-  --danger: #f38ba8;
-  --warn: #fab387;
+  color-scheme: light dark;
+  --bg: #eff1f5;
+  --fg: #4c4f69;
+  --panel: #e6e9ef;
+  --border: #ccd0da;
+  --muted: #6c6f85;
+  --danger: #d20f39;
+  --warn: #df8e1d;
+  --edge: #4c4f69;
+  --arrowhead: #4c4f69;
+  --node-stroke: #4c4f69;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e2e;
+    --fg: #cdd6f4;
+    --panel: #181825;
+    --border: #313244;
+    --muted: #a6adc8;
+    --danger: #f38ba8;
+    --warn: #fab387;
+    --edge: #cdd6f4;
+    --arrowhead: #cdd6f4;
+    --node-stroke: #cdd6f4;
+  }
 }
 
 * {
@@ -44,6 +76,15 @@ header h1 {
 header .timestamp {
   color: var(--muted);
   font-size: 12px;
+}
+
+header .timestamp.fresh {
+  color: var(--muted);
+}
+
+header .timestamp.stale {
+  color: var(--danger);
+  font-weight: 600;
 }
 
 #graph-wrap {
@@ -106,12 +147,12 @@ header .timestamp {
 
 .query-row.failed {
   border-color: var(--danger);
-  background: rgba(243, 139, 168, 0.1);
+  background: rgba(210, 15, 57, 0.1);
 }
 
 .query-row.truncated {
   border-color: var(--warn);
-  background: rgba(251, 179, 135, 0.1);
+  background: rgba(223, 142, 29, 0.1);
 }
 
 .query-row.zero-match {
@@ -140,7 +181,7 @@ header .timestamp {
 }
 
 #tooltip a {
-  color: #89b4fa;
+  color: #1e66f5;
 }
 
 #tooltip dl {
@@ -166,9 +207,16 @@ header .timestamp {
   pointer-events: none;
 }
 
+/* Edges and arrowheads: fully opaque, >= 4.5:1 against --bg in both themes (see header comment). */
 .edge {
-  stroke: var(--border);
-  stroke-opacity: 0.8;
+  stroke: var(--edge);
+  stroke-width: 1.75px;
+  stroke-opacity: 1;
+  fill: none;
+}
+
+.edge-arrowhead {
+  fill: var(--arrowhead);
 }
 
 .node-label {
@@ -177,9 +225,14 @@ header .timestamp {
   pointer-events: none;
 }
 
+.node-circle {
+  stroke: var(--node-stroke);
+  stroke-width: 1.75px;
+}
+
 .admission-ring {
   fill: none;
-  stroke: #fab387;
+  stroke: var(--warn);
   stroke-width: 2;
   stroke-dasharray: 2 2;
 }

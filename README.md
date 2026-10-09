@@ -6,38 +6,83 @@ D3 graph of every matched resource plus everything it links to, coloured by
 the resource's agent status and grouped into hulls by the (machine, user)
 pair it sits under.
 
-seer ships the MVP vertical slice (FACTORY-855/FACTORY-869): the config and
-graph-JSON schemas (FACTORY-853), a Jira collector, and a plain static D3
-viewer served by one command on localhost.
+seer ships the MVP vertical slice (FACTORY-855/FACTORY-869) plus live serving
+(FACTORY-875): the config and graph-JSON schemas (FACTORY-853), a Jira
+collector, and a D3 viewer that polls a live, cached `/graph.json` on
+localhost.
 
 ## What exists now vs. later
 
 - **Now:** the config + graph-JSON schemas and their loader/validator, a Jira
   collector (query execution, one-hop link expansion, dedupe, atomic
-  snapshot write), a plain static D3 viewer (hulls per source, herdr colours,
-  legend, tooltip, failed/truncated query indication), and `bun run seer`
-  (serve) / `bun run seer collect` (snapshot).
-- **Deliberately deferred past the MVP (FACTORY-841's LATER list):** reaching
-  each machine's own butchr daemon (seer never contacts a butchr daemon — see
-  below), a refresh/poll loop, filtering/search/saved layouts, GitHub as a
-  provider, and cross-platform packaging beyond one install command.
+  snapshot write), a plain D3 viewer (hulls per source, herdr colours,
+  legend, tooltip, failed/truncated query indication, a live/stale banner),
+  and `bun run seer` (serve — collects LIVE from Jira on every request,
+  cached and single-flighted) / `bun run seer collect` (one-off snapshot to
+  `graph.json`, independent of the server's own cache).
+- **Deliberately deferred (FACTORY-841's LATER list):** reaching each
+  machine's own butchr daemon (seer never contacts a butchr daemon — see
+  below), filtering/search/saved layouts, GitHub as a provider, and
+  cross-platform packaging beyond one install command.
 
 ## Install & run
 
 ```
 bun install
-bun run seer            # serves the viewer on localhost and opens the browser
+JIRA_BASE_URL=https://yoursite.atlassian.net JIRA_EMAIL=you@example.com JIRA_API_TOKEN=... \
+  bun run seer            # serves the viewer on localhost and opens the browser
 ```
 
-With no `graph.json` yet, the viewer falls back to the committed fixture so
-the one command always shows something. To collect a real snapshot from
-Jira:
+`bun run seer` now serves `/graph.json` LIVE: each request (subject to the
+cache below) runs the Jira collector configured by
+`fixtures/seer.config.example.json` (or `SEER_CONFIG`-adjacent conventions —
+see `src/cli.ts`). Without `JIRA_BASE_URL`/`JIRA_EMAIL`/`JIRA_API_TOKEN` set,
+or before any collection has ever succeeded, the viewer falls back to the
+committed fixture and says so (`usingFixture: true` in the graph JSON, a
+banner in the UI) — the one command always shows something.
+
+To write a one-off snapshot file instead (unrelated to the live server's own
+cache):
 
 ```
 JIRA_BASE_URL=https://yoursite.atlassian.net JIRA_EMAIL=you@example.com JIRA_API_TOKEN=... \
   bun run seer collect fixtures/seer.config.example.json
-bun run seer
 ```
+
+## Live serving, caching, and staleness (FACTORY-875)
+
+- **Cache + single-flight** (`src/server/graph-cache.ts`): `/graph.json` is
+  served from an in-process cache with a TTL of the config's
+  `refreshSeconds` (default 30, minimum 15 — rejected, not clamped, below
+  that). Concurrent requests during an in-progress collection share the
+  SAME collector run rather than each starting their own.
+- **Stale fallback:** on ANY Jira failure, the last good snapshot is served
+  with `stale: true`, `staleSince` (when that snapshot was collected), and a
+  short, credential-sanitised `error`. The viewer shows a `STALE since
+  HH:MM:SS` banner; a fresh response shows `live as of HH:MM:SS`. If no
+  collection has EVER succeeded, the committed fixture is served instead,
+  marked `usingFixture: true`.
+- **The viewer polls**, not just loads once: `public/app.js` re-fetches
+  `/graph.json` on a timer matching the response's own `refreshSeconds`, and
+  updates nodes/edges/colours IN PLACE by id — existing nodes keep their
+  force-layout position (no jump, no layout reset); added/removed nodes are
+  diffed in incrementally, and the simulation is only gently reheated
+  (`alpha`, not restarted) when the node/edge set actually changed.
+- **Credentials never leave the process:** `JIRA_BASE_URL`/`JIRA_EMAIL`/
+  `JIRA_API_TOKEN` are read from the environment only (e.g. a systemd
+  `EnvironmentFile`), never from config JSON, never sent to the browser.
+  Every collection failure is passed through
+  `src/server/sanitize-error.ts` before it can reach a response body or a
+  log line — see `test/serve.test.ts` and `test/graph-cache.test.ts` for the
+  assertion that a credential value never appears in a served response.
+- **Theme tokens + contrast** (`public/style.css`): edges, arrowheads, and
+  node strokes are drawn from three named CSS custom properties (`--edge`,
+  `--arrowhead`, `--node-stroke`), defined separately for light (default)
+  and dark (`prefers-color-scheme: dark`) themes. `test/contrast.test.ts`
+  reads those values straight out of `style.css` and computes their WCAG
+  contrast ratio against `--bg`, failing below 4.5:1. Computed ratios as of
+  this change: light theme `#4c4f69` vs `#eff1f5` = **7.06:1**; dark theme
+  `#cdd6f4` vs `#1e1e2e` = **11.34:1**.
 
 ## The viewer
 
@@ -100,9 +145,10 @@ code imports types rather than redeclaring them.
   parses and validates seer's own config file — `sources[]` (each a stable
   id, machine, user, display name, and queries), a link-expansion depth
   (`linkDepth`, default 1), a per-query result cap (`resultCap`, default 50),
-  and a `port`. Duplicate source ids are rejected. Invalid config throws a
-  `ConfigError` naming the offending field path — never a silent default,
-  never a raw stack trace.
+  a `port`, and `refreshSeconds` (the live `/graph.json` cache TTL and viewer
+  poll interval; default 30, rejected below a minimum of 15). Duplicate
+  source ids are rejected. Invalid config throws a `ConfigError` naming the
+  offending field path — never a silent default, never a raw stack trace.
 
 - **Graph JSON schema** (`src/graph/schema.ts`, validator in
   `src/graph/validate.ts`): the artifact the collector writes and the viewer
@@ -116,10 +162,14 @@ code imports types rather than redeclaring them.
   or it was only reached by link expansion). Per edge: source id, target id,
   and a small closed `kind` enum (`implements | blocks | relates | parent |
   link`); edges must reference existing node ids. Top-level: a schema
-  version, an ISO-8601 snapshot timestamp, the nodes and edges, and a
-  per-query record (`sourceId`, `provider`, `query`, `matched` count,
-  `error`, `truncated`) so a failed query stays distinguishable from a
-  zero-match one, and a capped result stays labelled as capped.
+  version, an ISO-8601 snapshot timestamp, the nodes and edges, a per-query
+  record (`sourceId`, `provider`, `query`, `matched` count, `error`,
+  `truncated`) so a failed query stays distinguishable from a zero-match
+  one, and (FACTORY-875, all optional so a plain collector snapshot stays
+  valid without them) the live-serving fields `stale`, `staleSince`,
+  `error`, `usingFixture`, and `refreshSeconds` — see `src/server/graph-cache.ts`,
+  the one place that always sets every one of them on what it actually
+  serves.
 
 ## Fixture
 

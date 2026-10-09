@@ -58,6 +58,11 @@ export const QueryRecordSchema = z.object({
 });
 export type QueryRecord = z.infer<typeof QueryRecordSchema>;
 
+/**
+ * Live-serving metadata (FACTORY-875): all optional, so a plain collector-produced snapshot (or
+ * the pre-FACTORY-875 fixture) stays schema-valid without them. `src/server/graph-cache.ts` is
+ * the one place that always sets every one of these fields on what it actually serves.
+ */
 export const GraphSchema = z.object({
   schemaVersion: z.literal(SCHEMA_VERSION),
   /** ISO-8601 timestamp of when this snapshot was taken. */
@@ -65,5 +70,15 @@ export const GraphSchema = z.object({
   nodes: z.array(GraphNodeSchema),
   edges: z.array(GraphEdgeSchema),
   queries: z.array(QueryRecordSchema),
+  /** True when this response is not a fresh collection: either a cached last-good snapshot served after a Jira failure, or the committed fixture. */
+  stale: z.boolean().optional(),
+  /** ISO-8601 timestamp of the last successful collection, present only alongside `stale: true` for a cached (non-fixture) snapshot. */
+  staleSince: z.string().datetime({ offset: true }).nullable().optional(),
+  /** Short, credential-sanitised description of the most recent collection failure; null on a fresh response. */
+  error: z.string().nullable().optional(),
+  /** True only when no collection has ever succeeded and this is the committed fixture, not real data. */
+  usingFixture: z.boolean().optional(),
+  /** The server's configured cache TTL in seconds, echoed so the viewer polls on the same interval. */
+  refreshSeconds: z.number().int().positive().optional(),
 });
 export type Graph = z.infer<typeof GraphSchema>;

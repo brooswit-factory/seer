@@ -43,6 +43,13 @@ export const SeerConfigSchema = z
     port: z.number().int().min(1).max(65535),
     /** Plain per-query result cap so one runaway query cannot hang a snapshot run. A capped query is marked `truncated` in the graph JSON, never silently read as the whole answer. */
     resultCap: z.number().int().min(1).default(50),
+    /**
+     * `/graph.json`'s in-process cache TTL, in seconds — also the viewer's poll interval.
+     * Minimum 15: below that, every page load would re-run the collector against Jira often
+     * enough to risk rate limits for no real freshness gain. Rejected (not clamped) below the
+     * minimum, matching this schema's existing "never silently default a malformed value" rule.
+     */
+    refreshSeconds: z.number().int().min(15, "refreshSeconds must be at least 15").default(30),
   })
   .superRefine((config, ctx) => {
     const seen = new Set<string>();

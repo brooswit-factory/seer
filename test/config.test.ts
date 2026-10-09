@@ -39,6 +39,26 @@ describe("parseConfig", () => {
     expect(config.resultCap).toBe(10);
   });
 
+  test("defaults refreshSeconds to 30 when omitted", () => {
+    const config = parseConfig(validConfig);
+    expect(config.refreshSeconds).toBe(30);
+  });
+
+  test("accepts an explicit refreshSeconds at the minimum", () => {
+    const config = parseConfig({ ...validConfig, refreshSeconds: 15 });
+    expect(config.refreshSeconds).toBe(15);
+  });
+
+  test("rejects a refreshSeconds below the 15s minimum", () => {
+    try {
+      parseConfig({ ...validConfig, refreshSeconds: 14 });
+      throw new Error("expected parseConfig to throw");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ConfigError);
+      expect((error as Error).message).toContain("refreshSeconds");
+    }
+  });
+
   test("rejects a config missing sources", () => {
     expect(() => parseConfig({ port: 4000 })).toThrow(ConfigError);
     try {
