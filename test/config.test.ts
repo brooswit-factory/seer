@@ -59,6 +59,26 @@ describe("parseConfig", () => {
     }
   });
 
+  test("defaults collectTimeoutSeconds to 60 when omitted", () => {
+    const config = parseConfig(validConfig);
+    expect(config.collectTimeoutSeconds).toBe(60);
+  });
+
+  test("accepts an explicit collectTimeoutSeconds", () => {
+    const config = parseConfig({ ...validConfig, collectTimeoutSeconds: 120 });
+    expect(config.collectTimeoutSeconds).toBe(120);
+  });
+
+  test("rejects a collectTimeoutSeconds below the 1s minimum", () => {
+    try {
+      parseConfig({ ...validConfig, collectTimeoutSeconds: 0 });
+      throw new Error("expected parseConfig to throw");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ConfigError);
+      expect((error as Error).message).toContain("collectTimeoutSeconds");
+    }
+  });
+
   test("rejects a config missing sources", () => {
     expect(() => parseConfig({ port: 4000 })).toThrow(ConfigError);
     try {

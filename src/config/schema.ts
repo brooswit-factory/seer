@@ -50,6 +50,12 @@ export const SeerConfigSchema = z
      * minimum, matching this schema's existing "never silently default a malformed value" rule.
      */
     refreshSeconds: z.number().int().min(15, "refreshSeconds must be at least 15").default(30),
+    /**
+     * Worst-case seconds a real `collect()` run is expected to take. Drives the viewer server's
+     * `Bun.serve` `idleTimeout` (that value + 5s of slack), so a slow first collect doesn't time
+     * out the request that triggered it.
+     */
+    collectTimeoutSeconds: z.number().int().min(1, "collectTimeoutSeconds must be at least 1").default(60),
   })
   .superRefine((config, ctx) => {
     const seen = new Set<string>();
