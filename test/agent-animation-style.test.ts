@@ -20,8 +20,13 @@ describe("agent-status pulse stylesheet (FACTORY-975/FACTORY-974)", () => {
 
   test("blocked pulses faster (shorter period) than stalled, which pulses faster than working", () => {
     const period = (selector: string) => {
-      const block = css.match(new RegExp(`\\.${selector}\\s*\\{([^}]*)\\}`));
-      const duration = block?.[1]?.match(/animation:\s*\S+\s+([\d.]+)s/);
+      // Anchored on "animation:" immediately inside the rule (not just any `{...}` with that
+      // selector) — `.pulse-border-blocked` is the LAST name in the shared `transform-box`/
+      // `transform-origin` selector list above the per-class rules, so it's the one selector
+      // here with no preceding comma before its own standalone rule's `{`; matching on the
+      // declaration itself, not just the selector+brace, avoids capturing that shared rule
+      // instead of the real per-class one.
+      const duration = css.match(new RegExp(`\\.${selector}\\s*\\{\\s*animation:\\s*\\S+\\s+([\\d.]+)s`));
       if (!duration) throw new Error(`style.css: no animation duration found for .${selector}`);
       return Number(duration[1]);
     };
