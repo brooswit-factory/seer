@@ -176,6 +176,20 @@ describe("collect", () => {
     expect(record?.truncated).toBe(true);
   });
 
+  test("resourceType flows through from the provider match onto the graph node (FACTORY-876)", async () => {
+    const config = configWith([
+      { id: "a@m1", machine: "m1", user: "a", displayName: "A", queries: [{ provider: "stub", query: "qa" }] },
+    ]);
+    const provider = new StubProvider({
+      qa: { matches: [match("typed", { resourceType: "Epic" }), match("untyped")] },
+    });
+
+    const graph = await collect(config, { stub: provider }, { resultCap: 50 });
+
+    expect(graph.nodes.find((n) => n.id === "stub:typed")?.resourceType).toBe("Epic");
+    expect(graph.nodes.find((n) => n.id === "stub:untyped")?.resourceType).toBeUndefined();
+  });
+
   test("an unregistered provider is a recorded error, not a crash", async () => {
     const config = configWith([
       { id: "a@m1", machine: "m1", user: "a", displayName: "A", queries: [{ provider: "nonexistent", query: "q" }] },

@@ -24,6 +24,7 @@ interface JiraIssueFields {
   labels?: string[];
   issuelinks?: JiraIssueLink[];
   parent?: { key: string };
+  issuetype?: { name: string };
 }
 interface JiraIssue {
   key: string;
@@ -115,6 +116,7 @@ export class JiraProvider implements Provider {
       agentStatus,
       providerCanReportStatus: true,
       admissionWithheld,
+      ...(issue.fields.issuetype?.name !== undefined ? { resourceType: issue.fields.issuetype.name } : {}),
       links,
     };
   }
@@ -123,7 +125,7 @@ export class JiraProvider implements Provider {
     const params = new URLSearchParams({
       jql,
       maxResults: String(maxResults),
-      fields: "summary,labels,issuelinks,parent",
+      fields: "summary,labels,issuelinks,parent,issuetype",
     });
     const url = `${this.baseUrl}/rest/api/3/search/jql?${params}`;
     const response = await this.fetchImpl(url, {
@@ -149,7 +151,7 @@ export class JiraProvider implements Provider {
     const prefix = `${this.name}:`;
     if (!id.startsWith(prefix)) return null;
     const key = id.slice(prefix.length);
-    const url = `${this.baseUrl}/rest/api/3/issue/${encodeURIComponent(key)}?fields=summary,labels,issuelinks,parent`;
+    const url = `${this.baseUrl}/rest/api/3/issue/${encodeURIComponent(key)}?fields=summary,labels,issuelinks,parent,issuetype`;
     const response = await this.fetchImpl(url, {
       method: "GET",
       headers: { authorization: this.authHeader, accept: "application/json" },

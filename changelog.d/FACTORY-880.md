@@ -1,0 +1,5 @@
+bump: patch
+
+### Changed
+- Merged origin/main's node-shape-per-resource-type story (FACTORY-876/878) into the live-refresh branch (FACTORY-873/875). The viewer's in-place update path (`renderNodeSelection`/`apply` in `public/app.js`) now draws each node as its resource-type shape (`public/shapes.js`) instead of a plain circle, and re-derives a node's shape/size/label offset on every refresh — a node whose `resourceType` changes re-renders its shape in place; new nodes get the right shape immediately.
+- Unified the duplicate node-stroke theme token: `--shape-stroke` (FACTORY-876) is removed in favour of reusing FACTORY-875's `--node-stroke`, since both named the same colour values for the same purpose. `public/contrast.js`'s `THEME_TOKENS` and `test/contrast.test.ts` were renamed to match (`shapeStroke` -> `nodeStroke`); no assertion was weakened, and the CSS-reading edge/arrowhead/node-stroke contrast suite and the pure-function/token suite (both testing their own thing) are now one coherent `test/contrast.test.ts`.
