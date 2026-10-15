@@ -100,6 +100,46 @@ describe("createFocusForce (d3-force-shaped wrapper)", () => {
     expect(nodes[1]!.vy).toBe(0);
   });
 
+  test("FACTORY-983 review fix: a node with NO basePositions entry drifts past the displacement cap over successive ticks, because its base keeps re-reading its own (already-pushed) current position instead of a fixed pre-push anchor", () => {
+    // Same shape a node newly introduced by app.js's apply() while a selection is already active
+    // used to have, before app.js started snapshotting it the moment it's created: no entry in
+    // `basePositions` at all. `focusTargets`' fallback (`basePositions.get(id) ?? {x: n.x, y: n.y}`)
+    // then reads the NODE'S OWN CURRENT position every tick, so each tick's "target" is computed
+    // relative to wherever the push already moved it to, not a single fixed starting point —
+    // letting total displacement keep growing well past `FOCUS_MAX_DISPLACEMENT_RATIO x` the
+    // focus-group radius instead of ever being bounded by it.
+    function settle(hasBaseEntry: boolean, ticks = 300) {
+      const nodes = [
+        { id: "focus", x: 0, y: 0, vx: 0, vy: 0 },
+        { id: "newcomer", x: 10, y: 0, vx: 0, vy: 0 },
+      ];
+      const focusIds = new Set(["focus"]);
+      const basePositions = new Map([["focus", { x: 0, y: 0 }]]);
+      if (hasBaseEntry) basePositions.set("newcomer", { x: 10, y: 0 });
+      const force = createFocusForce({ getFocusIds: () => focusIds, getBasePositions: () => basePositions });
+      force.initialize(nodes);
+      for (let i = 0; i < ticks; i++) {
+        force(1);
+        // Mimic d3's own per-tick position integration (x += vx) outside the force itself, same
+        // as the real simulation loop app.js installs this force into.
+        nodes[1]!.x += nodes[1]!.vx;
+        nodes[1]!.y += nodes[1]!.vy;
+        nodes[1]!.vx = 0;
+        nodes[1]!.vy = 0;
+      }
+      return Math.hypot(nodes[1]!.x - 10, nodes[1]!.y - 0);
+    }
+
+    const radius = FOCUS_MIN_GROUP_RADIUS; // single-node focus group floors to this
+    const cap = radius * 1.5; // FOCUS_MAX_DISPLACEMENT_RATIO's own default
+
+    const withoutSnapshot = settle(false);
+    const withSnapshot = settle(true);
+
+    expect(withoutSnapshot).toBeGreaterThan(cap); // the bug: no fixed anchor, cap not respected
+    expect(withSnapshot).toBeLessThanOrEqual(cap + 1e-6); // the fix: bounded by a fixed anchor
+  });
+
   test("a tick with an active selection nudges non-focus node velocity, leaves focus nodes untouched", () => {
     // "other" sits at 40px from the single-node focus group — inside the default falloff radius
     // (FOCUS_FALLOFF_RADIUS_RATIO x the FOCUS_MIN_GROUP_RADIUS floor of 20 = 60px), so it gets a

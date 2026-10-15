@@ -133,4 +133,12 @@ describe("app.js wires reconcileFocusPins into apply()'s topology refresh (FACTO
     expect(body).toMatch(/for \(const id of added\)[\s\S]*?n\.fx = n\.x;[\s\S]*?n\.fy = n\.y;/);
     expect(body).toMatch(/for \(const id of released\)[\s\S]*?n\.fx = null;[\s\S]*?n\.fy = null;/);
   });
+
+  test("a brand-new node created by apply() gets a basePositions snapshot the moment it's created, so a selection active at the time it appears has a fixed push anchor for it instead of its own drifting current position (FACTORY-983 review fix)", () => {
+    const applyBody = appJs.slice(appJs.indexOf("function apply("), appJs.indexOf("function setSelectedId("));
+    const freshIdx = applyBody.indexOf("const fresh = {");
+    const snapshotIdx = applyBody.indexOf('basePositions.set(fresh.id, { x: fresh.x, y: fresh.y });');
+    expect(freshIdx).toBeGreaterThan(-1);
+    expect(snapshotIdx).toBeGreaterThan(freshIdx);
+  });
 });

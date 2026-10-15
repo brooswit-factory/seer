@@ -973,6 +973,16 @@ function renderGraph(initialGraph, { onNodeClick, onBackgroundClick } = {}) {
         nodes.push(fresh);
         nodeById.set(fresh.id, fresh);
         added = true;
+        // FACTORY-983 review fix: a node that first appears WHILE a selection is already active
+        // has no "pre-select" entry in `basePositions` (that map is only fully (re)snapshotted by
+        // `engageFocus`/`releaseFocus`, at select/deselect time, not on every `apply()`).
+        // `focus-force.js`'s `focusTargets` falls back to a missing id's CURRENT x/y as its base
+        // every tick — which, for a push target computed FROM that same current position every
+        // tick, lets the node accumulate outward drift tick after tick instead of being bounded by
+        // the configured max-displacement cap relative to a single fixed anchor. Snapshotting this
+        // node's position right here, at the moment it's created (before any push has ever been
+        // applied to it), gives it the same fixed-anchor semantics every other node already has.
+        basePositions.set(fresh.id, { x: fresh.x, y: fresh.y });
       }
     }
 
