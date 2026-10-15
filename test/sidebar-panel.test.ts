@@ -52,6 +52,31 @@ describe("FACTORY-957: selection reducer wiring", () => {
   });
 });
 
+describe("FACTORY-982: every selection entry point routes through the same setSelectedId, no duplicated focus-push logic", () => {
+  const appJs = readViewerFile("app.js");
+
+  test("the graph-click path (syncSelectionUI, used by onNodeClick/onBackgroundClick/node-info-close) calls graphApi.setSelectedId", () => {
+    const body = appJs.slice(appJs.indexOf("function syncSelectionUI("), appJs.indexOf("function renderNodeListView("));
+    expect(body).toMatch(/graphApi\.setSelectedId\(selectionState\.selectedId\)/);
+  });
+
+  test("the sidebar-list-click/Enter path (selectFromList) also calls graphApi.setSelectedId — not a second, divergent focus-engagement path", () => {
+    const body = appJs.slice(appJs.indexOf("function selectFromList("), appJs.indexOf("function syncSelectionUI("));
+    expect(body).toMatch(/graphApi\.setSelectedId\(id,\s*\{\s*pan:\s*true\s*\}\)/);
+  });
+
+  test("setSelectedId itself is the ONE place that engages/releases the focus push (engageFocus/releaseFocus) — exactly one call site for each inside it, not duplicated per entry point", () => {
+    const start = appJs.indexOf("function setSelectedId(");
+    const body = appJs.slice(start, appJs.indexOf("function releaseFocusPins("));
+    expect(body).toMatch(/if \(nodeId == null\) releaseFocus\(\);/);
+    expect(body).toMatch(/else engageFocus\(nodeId\);/);
+    // And engageFocus/releaseFocus are called ONLY from here — never directly from onNodeClick,
+    // onBackgroundClick or selectFromList, which would mean a second, diverging entry point.
+    expect(appJs.match(/\bengageFocus\(/g) ?? []).toHaveLength(2); // the definition + this one call
+    expect(appJs.match(/\breleaseFocus\(/g) ?? []).toHaveLength(2); // the definition + this one call
+  });
+});
+
 describe("FACTORY-957: right panel toggles between legend and node-info", () => {
   test("index.html has both a legend view and a node-info view inside #sidebar, node-info hidden by default", () => {
     const html = readViewerFile("index.html");
