@@ -6,7 +6,11 @@ import { scaledSizeForNode } from "./node-scale.js";
 import { computeFitTransform, shouldFit } from "./fit-view.js";
 import { isProjectNode, projectFill, SHAPE_PROJECT, PROJECT_LINK_DISTANCE } from "./project.js";
 import { nodeInfoHtml, escapeHtml } from "./node-info.js";
-import { createSelectionState, select as selectNode, deselect as deselectNode, reconcileSelection } from "./selection.js";
+import { createSelectionState, select as selectNode, deselect as deselectNode, reconcileSelection, neighboursOf } from "./selection.js";
+import { createFocusForce } from "./focus-force.js";
+import { createPinTracker, pinForSelection, releaseSelectionPins, promoteToUserPin, reconcileFocusPins } from "./focus-pins.js";
+import { isNonFocus, isEdgeDimmed } from "./focus-dim.js";
+import { settleSynchronously } from "./focus-motion.js";
 import { sortNodesForSidebar, filterNodesForSidebar } from "./sidebar-list.js";
 import { splitNodeLabel, maxCharsForRadius, truncateToChars, line1Dy, labelBottomExtent, LINE2_FONT_SCALE, LINE_SPACING_PX } from "./node-label.js";
 import { animationClassFor, staggerDelayMs, PULSE_BODY_WORKING, PULSE_BORDER_STALLED, PULSE_BORDER_BLOCKED } from "./agent-animation.js";
@@ -41,6 +45,22 @@ const ADMISSION_RING_GAP = 9;
 function currentTheme() {
   return typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
+
+/** Live off the OS/browser `prefers-reduced-motion` preference (FACTORY-982 item 4) — same read-it-live pattern as `currentTheme` above, not a cached flag, so a mid-session OS setting change takes effect on the next select/deselect. */
+function prefersReducedMotion() {
+  return typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+}
+
+/**
+ * FACTORY-982: how long (ms) a select/deselect keeps the focus-force simulation warm
+ * (`simulation.alphaTarget(FOCUS_ALPHA_TARGET)`, same "warm while active, 0 once settled" shape
+ * `dragBehavior`'s start/end handlers already use for a drag gesture) before letting it decay back
+ * to rest — a selection has no natural "end" event the way a drag does, so this is a timer instead.
+ * Chosen generously long enough for the focus force's own easing (FOCUS_PUSH_STRENGTH above) to
+ * visibly settle at 0.3 alphaTarget before cutting it off.
+ */
+const FOCUS_ALPHA_TARGET = 0.3;
+const FOCUS_ALPHA_SETTLE_MS = 400;
 
 /**
  * Fallbacks for the FACTORY-890/913 size/layout constants, used ONLY when `/graph.json` predates
@@ -475,6 +495,23 @@ function renderGraph(initialGraph, { onNodeClick, onBackgroundClick } = {}) {
   // mirrored here only so the D3 render loop knows which node to halo. `main()` is the only
   // writer, via the returned `setSelectedId`.
   let selectedNodeId = null;
+  // FACTORY-982: the current focus group (selected node + its direct neighbours, empty when
+  // nothing is selected), the pre-select position snapshot the focus force pushes non-focus nodes
+  // away from, and the pin-origin bookkeeping (selection-pinned vs user-pinned) — all owned here,
+  // mutated only by `engageFocus`/`releaseFocus` below (themselves only ever called from
+  // `setSelectedId`, so graph click / list click / any future entry point all push through the
+  // SAME focus logic, never a duplicated per-entry-point copy).
+  let focusIds = new Set();
+  let basePositions = new Map();
+  let pinTracker = createPinTracker();
+  let focusAlphaTimer = null;
+  // FACTORY-982 item 5: a focus-driven reheat (`reheatFocusSimulation`'s eased branch) keeps
+  // `alphaTarget` warm then lets it decay to 0, which — like any other reheat in this file — ends
+  // by firing the simulation's "end" event. That event's handler normally calls `fit()`, but a
+  // selection must NEVER trigger a re-fit (the ticket's own item 5), so this flag tells the "end"
+  // handler below to skip exactly ONE such fit — set here, cleared there, and also cleared by the
+  // drag-start handler below so a genuine drag-driven settle still gets its normal fit-on-end.
+  let suppressNextFitOnEnd = false;
   // Agent-status pulse toggle (FACTORY-975/FACTORY-974's ACCESSIBILITY/CONTROLS item) — `main()`
   // owns the persisted preference and is the only writer, via the returned `setAnimationsEnabled`,
   // same mirrored-flag pattern as `selectedNodeId` above. Defaults to on; `main()` overrides this
@@ -606,15 +643,43 @@ function renderGraph(initialGraph, { onNodeClick, onBackgroundClick } = {}) {
     // Collision radius follows each node's OWN scaled size (COMPACT LAYOUT item 4) — a function,
     // not the old fixed NODE_RADIUS + 4, so a live-agent node pushes its neighbours away
     // proportionally to how big it actually is drawn.
-    .force("collide", d3.forceCollide((d) => approxRadiusForNode(d) + COLLIDE_PADDING));
+    .force("collide", d3.forceCollide((d) => approxRadiusForNode(d) + COLLIDE_PADDING))
+    // FACTORY-982 item 1: pushes every non-focus node radially away from the focus group's
+    // centroid, eased in via alpha like every other force here — a no-op (`focusIds` empty) when
+    // nothing is selected. `getFocusIds`/`getBasePositions` read the closure vars above fresh on
+    // every tick, so `engageFocus`/`releaseFocus` take effect immediately without re-installing
+    // the force.
+    .force(
+      "focus",
+      createFocusForce({
+        getFocusIds: () => focusIds,
+        getBasePositions: () => basePositions,
+      }),
+    );
 
-  simulation.on("end", () => fit());
+  simulation.on("end", () => {
+    // FACTORY-982 item 5: skip exactly the one fit-on-end that a focus-driven reheat's own decay
+    // would otherwise trigger — see `suppressNextFitOnEnd`'s own comment above.
+    if (suppressNextFitOnEnd) {
+      suppressNextFitOnEnd = false;
+      return;
+    }
+    fit();
+  });
 
   function dragBehavior() {
     return d3
       .drag()
       .on("start", (event, d) => {
         if (!event.active) simulation.alphaTarget(0.3).restart();
+        // A real drag is its own, independent reason to want the normal fit-on-end behaviour —
+        // never suppressed by an unrelated focus reheat that merely happened to still be settling.
+        suppressNextFitOnEnd = false;
+        // FACTORY-982 item 2: dragging a node the CURRENT selection pinned promotes it to a
+        // user pin — deselect must no longer release it. A drag on any other node is unaffected
+        // (not in `pinTracker.selectionPinned`, so this is a no-op bookkeeping-wise), preserving
+        // the existing drag behaviour exactly (temporary pin, released on "end" below).
+        if (pinTracker.selectionPinned.has(d.id)) pinTracker = promoteToUserPin(pinTracker, d.id);
         d.fx = d.x;
         d.fy = d.y;
       })
@@ -624,6 +689,9 @@ function renderGraph(initialGraph, { onNodeClick, onBackgroundClick } = {}) {
       })
       .on("end", (event, d) => {
         if (!event.active) simulation.alphaTarget(0);
+        // A promoted (user-pinned) node stays pinned at wherever the drag left it — everything
+        // else keeps the pre-existing behaviour of releasing its temporary drag-pin.
+        if (pinTracker.userPinned.has(d.id)) return;
         d.fx = null;
         d.fy = null;
       });
@@ -779,8 +847,19 @@ function renderGraph(initialGraph, { onNodeClick, onBackgroundClick } = {}) {
 
     updateSelectionHalo(merged);
     applyPulseClasses(merged);
+    updateFocusDimClasses(merged);
 
     return merged;
+  }
+
+  /** Presence-toggles the `.dimmed` class (FACTORY-982 item 3) on every node NOT in the current focus group — a no-op (nothing dimmed) when `focusIds` is empty. Re-run on every render pass (same as `updateSelectionHalo`/`applyPulseClasses` above) AND directly from `engageFocus`/`releaseFocus` so a focus change restyles immediately, not just on the next `apply()`. */
+  function updateFocusDimClasses(sel) {
+    sel.classed("dimmed", (d) => isNonFocus(d.id, focusIds));
+  }
+
+  /** Same presence-toggle as `updateFocusDimClasses` above, for edges: visible only between the SELECTED node and a neighbour (FACTORY-982 AC3); every other edge, including a neighbour<->neighbour one, dims. */
+  function updateFocusEdgeDimClasses(sel) {
+    sel.classed("dimmed", (d) => isEdgeDimmed(d, focusIds, selectedNodeId));
   }
 
   /**
@@ -844,18 +923,22 @@ function renderGraph(initialGraph, { onNodeClick, onBackgroundClick } = {}) {
       // `.edge.contains`), but keeps the same >= 3:1 --edge token, never a second colour.
       .attr("class", (d) => (d.kind === "contains" ? "edge contains" : "edge"))
       .attr("marker-end", "url(#seer-arrowhead)");
+    updateFocusEdgeDimClasses(edgeSel);
   }
 
   let nodeSel = nodeLayer.selectAll("g.node");
 
-  simulation.on("tick", () => {
+  /** Paints the current `x`/`y` of every node/edge — the simulation's own "tick" event fires this on every animated frame; the `prefers-reduced-motion` synchronous path (below) calls it ONCE after manually ticking the simulation to rest, since `simulation.tick()` itself never dispatches "tick" (only the internal timer-driven step loop does). */
+  function renderPositions() {
     edgeSel
       .attr("x1", (d) => d.source.x)
       .attr("y1", (d) => d.source.y)
       .attr("x2", (d) => d.target.x)
       .attr("y2", (d) => d.target.y);
     nodeSel.attr("transform", (d) => `translate(${d.x},${d.y})`);
-  });
+  }
+
+  simulation.on("tick", renderPositions);
 
   function apply(graph) {
     sizeConfig = sizeConfigFromGraph(graph);
@@ -890,6 +973,16 @@ function renderGraph(initialGraph, { onNodeClick, onBackgroundClick } = {}) {
         nodes.push(fresh);
         nodeById.set(fresh.id, fresh);
         added = true;
+        // FACTORY-983 review fix: a node that first appears WHILE a selection is already active
+        // has no "pre-select" entry in `basePositions` (that map is only fully (re)snapshotted by
+        // `engageFocus`/`releaseFocus`, at select/deselect time, not on every `apply()`).
+        // `focus-force.js`'s `focusTargets` falls back to a missing id's CURRENT x/y as its base
+        // every tick — which, for a push target computed FROM that same current position every
+        // tick, lets the node accumulate outward drift tick after tick instead of being bounded by
+        // the configured max-displacement cap relative to a single fixed anchor. Snapshotting this
+        // node's position right here, at the moment it's created (before any push has ever been
+        // applied to it), gives it the same fixed-anchor semantics every other node already has.
+        basePositions.set(fresh.id, { x: fresh.x, y: fresh.y });
       }
     }
 
@@ -898,6 +991,8 @@ function renderGraph(initialGraph, { onNodeClick, onBackgroundClick } = {}) {
     const nextLinkKeys = new Set(incomingLinks.map((e) => `${e.source}|${e.target}|${e.kind}`));
     const linksChanged = previousLinkKeys.size !== nextLinkKeys.size || [...nextLinkKeys].some((k) => !previousLinkKeys.has(k));
     links = incomingLinks.map((e) => ({ source: e.source, target: e.target, kind: e.kind }));
+
+    reconcileFocusSelection();
 
     simulation.nodes(nodes);
     simulation.force("link").links(links);
@@ -931,6 +1026,126 @@ function renderGraph(initialGraph, { onNodeClick, onBackgroundClick } = {}) {
     selectedNodeId = nodeId;
     updateSelectionHalo(nodeSel);
     if (pan && nodeId != null) panToSelectedNode(nodeById.get(nodeId));
+    // FACTORY-982: the ONE place that engages/releases the focus push, pins, and dim classes —
+    // every selection entry point (graph click, sidebar-list click; see `renderGraph`'s caller in
+    // `main()`) calls `setSelectedId`, so there is no second, diverging copy of this logic per
+    // entry point.
+    if (nodeId == null) releaseFocus();
+    else engageFocus(nodeId);
+  }
+
+  /** Releases whichever ids the CURRENT (about-to-change) selection pinned — never a user's own drag-pin (see focus-pins.js) — leaving `pinTracker`/node `fx`/`fy` as if no selection were pinning anything. Shared by both `engageFocus` (switching selections, so the old focus group's pins must go before the new one's are set) and `releaseFocus` (deselect). */
+  function releaseFocusPins() {
+    const { released, tracker } = releaseSelectionPins(pinTracker);
+    for (const id of released) {
+      const n = nodeById.get(id);
+      if (n) {
+        n.fx = null;
+        n.fy = null;
+      }
+    }
+    pinTracker = tracker;
+  }
+
+  /**
+   * FACTORY-983 review fix: `apply()` (the ~30s live-data refresh) can change the graph's topology
+   * while a selection is still active — the selected node survives, but an edge involving it can
+   * be added or removed, so its neighbour set (and so the focus group `engageFocus` computed at
+   * SELECT time) can go stale. Without this, a newly-added neighbour stays dimmed/unpinned/pushed
+   * (never having been pinned by the original `engageFocus` call) and a removed one stays
+   * incorrectly pinned at full opacity forever (deselect only releases the CURRENT focus group,
+   * which no longer names it). Recomputes the focus group from the just-updated `links` and
+   * reconciles pins via `focus-pins.js`'s `reconcileFocusPins` (added ids pinned, removed ids
+   * released — a user's own drag-pin is never touched either way, same as every other pin path in
+   * this file). A no-op whenever nothing is selected or the selected node itself didn't survive
+   * the refresh (the latter is `main()`'s `reconcileSelection`/`setSelectedId(null)` path to
+   * handle, moments after this `apply()` call returns — recomputing a focus group for a node that
+   * no longer exists would be meaningless). Deliberately does NOT touch `basePositions`: it stays
+   * keyed by positions snapshotted at the ORIGINAL select, and `focus-force.js`'s `focusTargets`
+   * already falls back to a node's current `x`/`y` for any id missing from it (e.g. a node that's
+   * brand new this refresh), so every non-focus node — old or new — still gets a sane push base.
+   */
+  function reconcileFocusSelection() {
+    if (selectedNodeId == null || !nodeById.has(selectedNodeId)) return;
+
+    const neighbourIds = neighboursOf(selectedNodeId, links);
+    const newFocusIds = new Set([selectedNodeId, ...neighbourIds]);
+
+    const { tracker, added, released } = reconcileFocusPins(pinTracker, focusIds, newFocusIds);
+    pinTracker = tracker;
+
+    for (const id of added) {
+      const n = nodeById.get(id);
+      if (n) {
+        n.fx = n.x;
+        n.fy = n.y;
+      }
+    }
+    for (const id of released) {
+      const n = nodeById.get(id);
+      if (n) {
+        n.fx = null;
+        n.fy = null;
+      }
+    }
+
+    focusIds = newFocusIds;
+  }
+
+  /** Selects a new focus group: releases the previous selection's pins first (so switching A -> B never leaves A's focus group pinned), computes `nodeId` + its direct neighbours (public/selection.js's `neighboursOf`), pins them in place, snapshots every node's current position as the focus force's "pre-select" base, and reheats the simulation. */
+  function engageFocus(nodeId) {
+    releaseFocusPins();
+    const neighbourIds = neighboursOf(nodeId, links);
+    const newFocusIds = new Set([nodeId, ...neighbourIds]);
+
+    basePositions = new Map(nodes.map((n) => [n.id, { x: n.x, y: n.y }]));
+    pinTracker = pinForSelection(pinTracker, newFocusIds);
+    for (const id of newFocusIds) {
+      const n = nodeById.get(id);
+      if (n) {
+        n.fx = n.x;
+        n.fy = n.y;
+      }
+    }
+    focusIds = newFocusIds;
+    updateFocusDimClasses(nodeSel);
+    updateFocusEdgeDimClasses(edgeSel);
+    reheatFocusSimulation();
+  }
+
+  /** Deselect: releases the focus group's pins and clears the focus state entirely, so the focus force (now with an empty `focusIds`) stops pushing and the dimmed nodes/edges return to full opacity. */
+  function releaseFocus() {
+    releaseFocusPins();
+    focusIds = new Set();
+    basePositions = new Map();
+    updateFocusDimClasses(nodeSel);
+    updateFocusEdgeDimClasses(edgeSel);
+    reheatFocusSimulation();
+  }
+
+  /**
+   * FACTORY-982 item 4: eases the simulation toward the just-changed focus state (pins + push) —
+   * a modest `alphaTarget`, same shape `dragBehavior`'s start/end already use, reset to 0 after
+   * `FOCUS_ALPHA_SETTLE_MS` since a selection (unlike a drag) has no natural "end" event to reset
+   * it from. Under `prefers-reduced-motion: reduce`, skips the easing entirely and instead ticks
+   * the simulation synchronously to rest via `focus-motion.js`'s `settleSynchronously` (unit-tested
+   * there against a real `d3-force` simulation) before repainting once, so the new layout applies
+   * as an instant jump with no animation frames. Either path marks the NEXT "end" event as one to
+   * skip `fit()` for (item 5) — the eased path's alphaTarget-decay-to-0 would otherwise end the
+   * simulation and re-fit the view on a plain select; `settleSynchronously` itself calls
+   * `simulation.stop()`, so it never actually fires "end", but the flag is set unconditionally
+   * here (not inside the `if`) so neither path depends on that d3-internal detail to stay correct.
+   */
+  function reheatFocusSimulation() {
+    clearTimeout(focusAlphaTimer);
+    suppressNextFitOnEnd = true;
+    if (prefersReducedMotion()) {
+      settleSynchronously(simulation);
+      renderPositions();
+      return;
+    }
+    simulation.alphaTarget(FOCUS_ALPHA_TARGET).restart();
+    focusAlphaTimer = setTimeout(() => simulation.alphaTarget(0), FOCUS_ALPHA_SETTLE_MS);
   }
 
   /**
