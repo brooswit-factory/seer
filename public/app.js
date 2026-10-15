@@ -8,7 +8,7 @@ import { isProjectNode, projectFill, SHAPE_PROJECT, PROJECT_LINK_DISTANCE } from
 import { nodeInfoHtml, escapeHtml } from "./node-info.js";
 import { createSelectionState, select as selectNode, deselect as deselectNode, reconcileSelection, neighboursOf } from "./selection.js";
 import { createFocusForce } from "./focus-force.js";
-import { createPinTracker, pinForSelection, releaseSelectionPins, promoteToUserPin } from "./focus-pins.js";
+import { createPinTracker, pinForSelection, releaseSelectionPins, promoteToUserPin, reconcileFocusPins } from "./focus-pins.js";
 import { isNonFocus, isEdgeDimmed } from "./focus-dim.js";
 import { settleSynchronously } from "./focus-motion.js";
 import { sortNodesForSidebar, filterNodesForSidebar } from "./sidebar-list.js";
@@ -857,9 +857,9 @@ function renderGraph(initialGraph, { onNodeClick, onBackgroundClick } = {}) {
     sel.classed("dimmed", (d) => isNonFocus(d.id, focusIds));
   }
 
-  /** Same presence-toggle as `updateFocusDimClasses` above, for edges: dimmed unless BOTH endpoints are in the focus group. */
+  /** Same presence-toggle as `updateFocusDimClasses` above, for edges: visible only between the SELECTED node and a neighbour (FACTORY-982 AC3); every other edge, including a neighbour<->neighbour one, dims. */
   function updateFocusEdgeDimClasses(sel) {
-    sel.classed("dimmed", (d) => isEdgeDimmed(d, focusIds));
+    sel.classed("dimmed", (d) => isEdgeDimmed(d, focusIds, selectedNodeId));
   }
 
   /**
@@ -982,6 +982,8 @@ function renderGraph(initialGraph, { onNodeClick, onBackgroundClick } = {}) {
     const linksChanged = previousLinkKeys.size !== nextLinkKeys.size || [...nextLinkKeys].some((k) => !previousLinkKeys.has(k));
     links = incomingLinks.map((e) => ({ source: e.source, target: e.target, kind: e.kind }));
 
+    reconcileFocusSelection();
+
     simulation.nodes(nodes);
     simulation.force("link").links(links);
 
@@ -1033,6 +1035,51 @@ function renderGraph(initialGraph, { onNodeClick, onBackgroundClick } = {}) {
       }
     }
     pinTracker = tracker;
+  }
+
+  /**
+   * FACTORY-983 review fix: `apply()` (the ~30s live-data refresh) can change the graph's topology
+   * while a selection is still active — the selected node survives, but an edge involving it can
+   * be added or removed, so its neighbour set (and so the focus group `engageFocus` computed at
+   * SELECT time) can go stale. Without this, a newly-added neighbour stays dimmed/unpinned/pushed
+   * (never having been pinned by the original `engageFocus` call) and a removed one stays
+   * incorrectly pinned at full opacity forever (deselect only releases the CURRENT focus group,
+   * which no longer names it). Recomputes the focus group from the just-updated `links` and
+   * reconciles pins via `focus-pins.js`'s `reconcileFocusPins` (added ids pinned, removed ids
+   * released — a user's own drag-pin is never touched either way, same as every other pin path in
+   * this file). A no-op whenever nothing is selected or the selected node itself didn't survive
+   * the refresh (the latter is `main()`'s `reconcileSelection`/`setSelectedId(null)` path to
+   * handle, moments after this `apply()` call returns — recomputing a focus group for a node that
+   * no longer exists would be meaningless). Deliberately does NOT touch `basePositions`: it stays
+   * keyed by positions snapshotted at the ORIGINAL select, and `focus-force.js`'s `focusTargets`
+   * already falls back to a node's current `x`/`y` for any id missing from it (e.g. a node that's
+   * brand new this refresh), so every non-focus node — old or new — still gets a sane push base.
+   */
+  function reconcileFocusSelection() {
+    if (selectedNodeId == null || !nodeById.has(selectedNodeId)) return;
+
+    const neighbourIds = neighboursOf(selectedNodeId, links);
+    const newFocusIds = new Set([selectedNodeId, ...neighbourIds]);
+
+    const { tracker, added, released } = reconcileFocusPins(pinTracker, focusIds, newFocusIds);
+    pinTracker = tracker;
+
+    for (const id of added) {
+      const n = nodeById.get(id);
+      if (n) {
+        n.fx = n.x;
+        n.fy = n.y;
+      }
+    }
+    for (const id of released) {
+      const n = nodeById.get(id);
+      if (n) {
+        n.fx = null;
+        n.fy = null;
+      }
+    }
+
+    focusIds = newFocusIds;
   }
 
   /** Selects a new focus group: releases the previous selection's pins first (so switching A -> B never leaves A's focus group pinned), computes `nodeId` + its direct neighbours (public/selection.js's `neighboursOf`), pins them in place, snapshots every node's current position as the focus force's "pre-select" base, and reheats the simulation. */

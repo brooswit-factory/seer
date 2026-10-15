@@ -28,24 +28,35 @@ describe("focus-dim (FACTORY-982 item 3's dim-class predicates)", () => {
   });
 
   describe("isEdgeDimmed", () => {
+    // "a" is the selected node, "b" a neighbour (focus group {a, b}) — same shape FACTORY-982
+    // AC3 describes: "edges between the selected node and its neighbours stay fully visible".
     const focusIds = new Set(["a", "b"]);
+    const selectedId = "a";
 
     test("nothing is dimmed when there is no selection", () => {
-      expect(isEdgeDimmed({ source: "a", target: "c" }, new Set())).toBe(false);
+      expect(isEdgeDimmed({ source: "a", target: "c" }, new Set(), null)).toBe(false);
     });
 
-    test("an edge between two focus-group nodes stays fully visible", () => {
-      expect(isEdgeDimmed({ source: "a", target: "b" }, focusIds)).toBe(false);
+    test("an edge between the selected node and a neighbour stays fully visible", () => {
+      expect(isEdgeDimmed({ source: "a", target: "b" }, focusIds, selectedId)).toBe(false);
+      expect(isEdgeDimmed({ source: "b", target: "a" }, focusIds, selectedId)).toBe(false);
     });
 
     test("an edge touching a non-focus node is dimmed", () => {
-      expect(isEdgeDimmed({ source: "a", target: "c" }, focusIds)).toBe(true);
-      expect(isEdgeDimmed({ source: "c", target: "d" }, focusIds)).toBe(true);
+      expect(isEdgeDimmed({ source: "a", target: "c" }, focusIds, selectedId)).toBe(true);
+      expect(isEdgeDimmed({ source: "c", target: "d" }, focusIds, selectedId)).toBe(true);
+    });
+
+    test("FACTORY-982 AC3 regression: a neighbour<->neighbour edge NOT touching the selected node dims too — triangle A-B, A-C, B-C with A selected must dim B-C", () => {
+      const triangleFocusIds = new Set(["a", "b", "c"]); // A selected, B and C both its neighbours
+      expect(isEdgeDimmed({ source: "a", target: "b" }, triangleFocusIds, "a")).toBe(false);
+      expect(isEdgeDimmed({ source: "a", target: "c" }, triangleFocusIds, "a")).toBe(false);
+      expect(isEdgeDimmed({ source: "b", target: "c" }, triangleFocusIds, "a")).toBe(true);
     });
 
     test("normalizes d3-resolved edges (source/target as node object references)", () => {
-      expect(isEdgeDimmed({ source: { id: "a" }, target: { id: "b" } }, focusIds)).toBe(false);
-      expect(isEdgeDimmed({ source: { id: "a" }, target: { id: "c" } }, focusIds)).toBe(true);
+      expect(isEdgeDimmed({ source: { id: "a" }, target: { id: "b" } }, focusIds, selectedId)).toBe(false);
+      expect(isEdgeDimmed({ source: { id: "a" }, target: { id: "c" } }, focusIds, selectedId)).toBe(true);
     });
   });
 });
@@ -55,7 +66,7 @@ describe("app.js wires the .dimmed class toggle to select/deselect, not just the
 
   test("updateFocusDimClasses/updateFocusEdgeDimClasses use the pure predicates via sel.classed(\"dimmed\", ...)", () => {
     expect(appJs).toMatch(/function updateFocusDimClasses\(sel\)\s*\{\s*sel\.classed\("dimmed",\s*\(d\)\s*=>\s*isNonFocus\(d\.id,\s*focusIds\)\)/);
-    expect(appJs).toMatch(/function updateFocusEdgeDimClasses\(sel\)\s*\{\s*sel\.classed\("dimmed",\s*\(d\)\s*=>\s*isEdgeDimmed\(d,\s*focusIds\)\)/);
+    expect(appJs).toMatch(/function updateFocusEdgeDimClasses\(sel\)\s*\{\s*sel\.classed\("dimmed",\s*\(d\)\s*=>\s*isEdgeDimmed\(d,\s*focusIds,\s*selectedNodeId\)\)/);
   });
 
   test("engageFocus (on select) calls both dim-class updaters on the live node/edge selections, not just the next apply()", () => {

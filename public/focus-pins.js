@@ -50,3 +50,33 @@ export function promoteToUserPin(tracker, id) {
   userPinned.add(id);
   return { selectionPinned, userPinned };
 }
+
+/**
+ * FACTORY-983 review fix: a selection can stay active across a data refresh whose topology
+ * changed (`app.js`'s `apply()`) — the selected node's neighbour set can grow (a new edge) or
+ * shrink (an edge removed), so the pin bookkeeping needs a scoped delta, not the full
+ * switch-selections dance (`releaseSelectionPins` + `pinForSelection`) that would otherwise
+ * release the WHOLE previous focus group, including members unaffected by the topology change.
+ * Given the previous and freshly-recomputed focus-group id sets, pins exactly the ids that newly
+ * entered (`added`, same user-pin-wins rule as `pinForSelection`) and releases exactly the ids
+ * that left (`released` — a strict subset of `removed`: a `removed` id already promoted to
+ * `userPinned` by a drag is left alone, same as `releaseSelectionPins`). An id present in both
+ * sets is untouched (no needless re-pin/churn).
+ */
+export function reconcileFocusPins(tracker, previousFocusIds, newFocusIds) {
+  const added = [...newFocusIds].filter((id) => !previousFocusIds.has(id));
+  const removed = [...previousFocusIds].filter((id) => !newFocusIds.has(id));
+
+  let next = added.length > 0 ? pinForSelection(tracker, added) : tracker;
+
+  const released = new Set();
+  if (removed.length > 0) {
+    const selectionPinned = new Set(next.selectionPinned);
+    for (const id of removed) {
+      if (selectionPinned.delete(id)) released.add(id);
+    }
+    next = { selectionPinned, userPinned: next.userPinned };
+  }
+
+  return { tracker: next, added, released };
+}

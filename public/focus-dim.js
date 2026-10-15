@@ -10,16 +10,19 @@ export function isNonFocus(nodeId, focusIds) {
 }
 
 /**
- * Whether an edge should be dimmed: an edge between two focus-group nodes (selected<->neighbour,
- * or neighbour<->neighbour) stays fully visible; every other edge — touching at least one non-focus
- * node — dims, same as a non-focus node itself. `edge` is the same `{source, target}` shape
- * `app.js`'s `links` array uses, normalized the same way `neighboursOf`/`epicCountForProject`
- * already do since d3's `forceLink` resolves `source`/`target` from a string id to a node object
- * reference in place after the first tick.
+ * Whether an edge should be dimmed: FACTORY-982 AC3 is specifically "edges between the SELECTED
+ * node and its neighbours stay fully visible; all other edges are dimmed the same way" — so a
+ * neighbour<->neighbour edge (touching the focus group but not the selected node itself, e.g. B-C
+ * in a selected-A triangle A-B/A-C/B-C) dims too, same as any edge touching a non-focus node.
+ * `edge` is the same `{source, target}` shape `app.js`'s `links` array uses, normalized the same
+ * way `neighboursOf`/`epicCountForProject` already do since d3's `forceLink` resolves
+ * `source`/`target` from a string id to a node object reference in place after the first tick.
  */
-export function isEdgeDimmed(edge, focusIds) {
+export function isEdgeDimmed(edge, focusIds, selectedId) {
   if (focusIds.size === 0) return false;
   const sourceId = typeof edge.source === "object" ? edge.source.id : edge.source;
   const targetId = typeof edge.target === "object" ? edge.target.id : edge.target;
-  return !(focusIds.has(sourceId) && focusIds.has(targetId));
+  if (sourceId === selectedId) return !focusIds.has(targetId);
+  if (targetId === selectedId) return !focusIds.has(sourceId);
+  return true;
 }
