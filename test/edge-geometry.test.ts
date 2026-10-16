@@ -41,8 +41,11 @@ describe("edgeEndPoint (FACTORY-882: pull the edge's end point back to the targe
   });
 
   test("app.js's renderPositions sets edge x2/y2 from edgeEndPoint, not the target's raw x/y", () => {
+    // The radius passed in is `enclosingRadiusForNode`'s (FACTORY-882 review, see
+    // test/node-boundary.test.ts), not a plain equal-area radius — that part is covered there;
+    // this test only confirms edgeEndPoint itself is what computes the endpoint.
     const src = readAppJs();
     const renderPositions = src.slice(src.indexOf("function renderPositions"), src.indexOf("function renderPositions") + 600);
-    expect(renderPositions).toContain("edgeEndPoint(d.source, d.target, approxRadiusForNode(d.target))");
+    expect(renderPositions).toContain("edgeEndPoint(d.source, d.target, enclosingRadiusForNode(d.target))");
   });
 });

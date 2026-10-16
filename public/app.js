@@ -1,7 +1,7 @@
 import { colorForNode, STATUS_COLORS, CANNOT_REPORT_COLOR } from "./colors.js";
 import { jiraBorderForNode, JIRA_STATUS_BORDERS } from "./jira-status.js";
 import { classifyQueryRecord, queryStatusLabel } from "./query-status.js";
-import { shapeForNode, borderForNode, fillInsetForNode, shouldShowDiscoveryDot, BORDER_GAP_WIDTH, SHAPE_HEXAGON, SHAPE_ROUNDED_SQUARE } from "./shapes.js";
+import { shapeForNode, borderForNode, fillInsetForNode, shouldShowDiscoveryDot, BORDER_GAP_WIDTH, BORDER_WIDTH, SHAPE_HEXAGON, SHAPE_ROUNDED_SQUARE } from "./shapes.js";
 import { scaledSizeForNode } from "./node-scale.js";
 import { computeFitTransform, shouldFit } from "./fit-view.js";
 import { isProjectNode, projectFill, SHAPE_PROJECT, PROJECT_LINK_DISTANCE } from "./project.js";
@@ -16,6 +16,7 @@ import { splitNodeLabel, maxCharsForRadius, truncateToChars, line1Dy, labelBotto
 import { animationClassFor, staggerDelayMs, PULSE_BODY_WORKING, PULSE_BORDER_STALLED, PULSE_BORDER_BLOCKED } from "./agent-animation.js";
 import { loadAnimationsEnabled, saveAnimationsEnabled } from "./animation-prefs.js";
 import { edgeEndPoint } from "./edge-geometry.js";
+import { farthestPointRadius } from "./node-boundary.js";
 
 /** Extra radius (px), on top of the admission ring's own gap, the selection halo (FACTORY-957 item 4) is drawn at — distinct from `ADMISSION_RING_GAP` below so the two rings never collide even when a node has both. */
 const SELECTION_HALO_GAP = 13;
@@ -546,6 +547,26 @@ function renderGraph(initialGraph, { onNodeClick, onBackgroundClick } = {}) {
   }
 
   /**
+   * FACTORY-882 review (PR #42): `approxRadiusForNode`'s equal-area-circle radius underestimates
+   * the true boundary of every non-circular shape — a Bug's (triangle) apex, for instance, sits
+   * well outside that circle, so clipping an incoming edge to it still buries the arrowhead tip
+   * in the triangle's fill. This uses the node's ACTUAL shape (`farthestPointRadius`, run against
+   * the same D3 symbol type/size `app.js` draws the node with) instead of an equal-area
+   * approximation, so the returned radius clears the shape from every approach angle, not just
+   * the ones closest to a circle. `BORDER_WIDTH / 2` on top accounts for the border stroke's own
+   * outward half (drawn at the node's full un-inset path, centred on it — see `borderForNode`),
+   * which otherwise still covers an edge clipped exactly to the fill boundary. Used ONLY for edge
+   * clipping (`renderPositions`, below) — every other `approxRadiusForNode` caller (collide
+   * force, fit-view, labels) is unrelated to the arrowhead and keeps its existing equal-area
+   * approximation, which a shape change here must not perturb.
+   */
+  function enclosingRadiusForNode(node) {
+    const shape = shapeForNode(node);
+    const size = scaledSizeForNode(node, sizeConfig);
+    return farthestPointRadius(D3_SYMBOL_BY_SHAPE[shape], size) + BORDER_WIDTH / 2;
+  }
+
+  /**
    * The FILL shape's own path — smaller than `symbolPathForNode`'s by `fillInsetForNode` (zero
    * for a project node, which draws no border and needs no gap) so the canvas-coloured
    * `BORDER_GAP_WIDTH`px annulus FACTORY-944 item 3 requires shows through between the fill and
@@ -935,15 +956,15 @@ function renderGraph(initialGraph, { onNodeClick, onBackgroundClick } = {}) {
    * `edgeEndPoint` (FACTORY-882) — `marker-end` anchors the arrowhead to that end point, and an
    * end point AT the target's centre buries the arrowhead under the node shape, which paints on
    * top (nodeLayer is appended after edgeLayer, below). Recomputed every tick (both endpoints
-   * move every frame) and per-edge (node radius varies by type/size tier via
-   * `approxRadiusForNode`), never a single constant.
+   * move every frame) and per-edge (node radius varies by type/size tier, and by actual shape,
+   * via `enclosingRadiusForNode`), never a single constant.
    */
   function renderPositions() {
     edgeSel
       .attr("x1", (d) => d.source.x)
       .attr("y1", (d) => d.source.y)
-      .attr("x2", (d) => edgeEndPoint(d.source, d.target, approxRadiusForNode(d.target)).x)
-      .attr("y2", (d) => edgeEndPoint(d.source, d.target, approxRadiusForNode(d.target)).y);
+      .attr("x2", (d) => edgeEndPoint(d.source, d.target, enclosingRadiusForNode(d.target)).x)
+      .attr("y2", (d) => edgeEndPoint(d.source, d.target, enclosingRadiusForNode(d.target)).y);
     nodeSel.attr("transform", (d) => `translate(${d.x},${d.y})`);
   }
 
