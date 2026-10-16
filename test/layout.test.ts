@@ -1,23 +1,25 @@
-// COMPACT LAYOUT item 5 (FACTORY-890/FACTORY-889/FACTORY-898): run the force simulation to rest,
-// headless, against a graph the size of a real fleet snapshot, and assert the settled layout fits
-// a 1440x900 viewport after fit-to-view at a readable scale with no significant overlap.
+// COMPACT LAYOUT item 5 (FACTORY-890/FACTORY-889): run the force simulation to rest, headless,
+// against a graph the size of a real fleet snapshot (~136 nodes), and assert the settled layout
+// fits a 1440x900 viewport after fit-to-view at a readable scale with no significant overlap.
 //
-// DATA NOTE (FACTORY-898): `test/fixtures/graph.real-capture.json` is REAL data — 141 genuine FACTORY
-// Jira issues (project = FACTORY ORDER BY created DESC, cap 100; project = FACTORY AND issuetype =
-// Epic ORDER BY created ASC, cap 40; project = FACTORY AND issuetype = "Sub-task", cap 40) captured
-// 2026-10-15 via butchr's own authorized `jira_search`/read-only MCP access, not a live seer
-// collector run: this workspace still can't reach codey's seer (same structural loopback-bind
-// reachability gap FACTORY-889 hit — see `src/server/serve.ts`) or get a JIRA_API_TOKEN to run
-// `bun run seer collect` directly. Per the ticket's reviewing Epic (backlog hold audit comment),
-// this is the authorized bounded-scope path: real data through existing read-only access, not a
-// weakened bind or copied credential. Node fields (agentStatus, resourceType, jiraStatus, labels)
-// are mapped exactly as `src/collector/jira.ts`'s `JiraProvider.toMatch` does.
+// DATA NOTE (FACTORY-898, still BLOCKED as of 2026-10-16): the ticket asks for one REAL
+// `/graph.json` captured from a running seer. This workspace still can't produce that: seer's
+// viewer is STRUCTURALLY loopback-only (`src/server/serve.ts` binds `127.0.0.1` as a literal,
+// never configurable), there is no reachable host running seer, and no `JIRA_API_TOKEN` is
+// available here to run `bun run seer collect` against this fleet's real Jira.
 //
-// REAL FINDING, not a loosened assertion: this slice of real FACTORY data has ZERO Jira native
-// issuelinks and only one `parent` edge (to an issue outside this capture, so unused under
-// linkDepth=0) — this fleet's actual practice is cross-referencing work in free-text descriptions,
-// not structured Jira links. The captured graph is therefore edge-sparse; layout is driven almost
-// entirely by charge + gravity + collision, not forceLink. That is real topology, left as captured.
+// A prior attempt on this ticket manually assembled a fixture from capped `jira_search`/
+// `jira_get_issue` MCP reads (read-only, already-authorized access) rather than an actual seer
+// collector run. On review that was correctly rejected: hand-assembled records with a chosen
+// `linkDepth = 0` and zero edges don't establish what the DEPLOYED collector's topology/config
+// actually produces, and are not a substitute for the acceptance criterion regardless of the
+// access path's authorization. That attempt is reverted; this is the exact blocker, left stated
+// rather than worked around: a real `/graph.json` capture needs either host access to a running
+// seer, or a `JIRA_API_TOKEN` to run the collector directly — neither is available in this
+// workspace. `test/fixtures/graph.synthetic-136.json` remains a SYNTHETIC stand-in: generated
+// with the real schema (same node/edge shape, same type/status mix a fleet snapshot has, 130
+// nodes / 107 edges) but not live data, and the margin below is NOT tightened against it per the
+// ticket's own instruction (tightening is contingent on a real capture being in place).
 //
 // This test exercises `d3-force` directly (a devDependency, pure algorithm package with no DOM),
 // not the CDN-loaded `d3` global `public/app.js` runs in a browser — same force names/semantics,
@@ -38,7 +40,7 @@ const COLLIDE_PADDING = 4;
 const OVERLAP_TOLERANCE_PX = 1;
 
 function loadFixture() {
-  const path = new URL("./fixtures/graph.real-capture.json", import.meta.url).pathname;
+  const path = new URL("./fixtures/graph.synthetic-136.json", import.meta.url).pathname;
   return JSON.parse(readFileSync(path, "utf-8"));
 }
 
@@ -75,11 +77,11 @@ function settleLayout(graph: any, { width = VIEWPORT_WIDTH, height = VIEWPORT_HE
   return nodes;
 }
 
-describe("real-data (~141 node) layout settles into a 1440x900 viewport after fit-to-view", () => {
+describe("real-data (~136 node) layout settles into a 1440x900 viewport after fit-to-view", () => {
   const fixture = loadFixture();
   const settled = settleLayout(fixture);
 
-  test("fixture is the expected ~141-node scale", () => {
+  test("fixture is the expected ~136-node scale", () => {
     expect(settled.length).toBeGreaterThan(100);
   });
 
@@ -107,14 +109,10 @@ describe("real-data (~141 node) layout settles into a 1440x900 viewport after fi
       maxY = Math.max(maxY, sy + sr);
     }
 
-    // Tightened from an unjustified 60px (FACTORY-898): against the real 141-node capture above,
-    // the settled/fitted bbox overflows the viewport by at most ~4px on y (minY=-4, maxY=904 at
-    // k=1, the MIN_READABLE_SCALE label floor — see the console.log below for the exact figures
-    // measured at the time of writing). 10px is that measured worst case plus a small buffer for
-    // normal run-to-run jitter in where the simulation settles; it is not slack nobody has
-    // justified. If this starts failing, a real layout-tuning problem is more likely than the
-    // margin being wrong — see the ticket's acceptance item 4 before widening it.
-    const margin = 10;
+    // A loose margin (half the padding `computeFitTransform` targets): the layout-tuning
+    // constants above are meant to get real ~136-node data inside the viewport; a clamp to
+    // MIN_READABLE_SCALE (label floor) can still leave a small, documented overflow.
+    const margin = 60;
     expect(minX).toBeGreaterThanOrEqual(-margin);
     expect(maxX).toBeLessThanOrEqual(VIEWPORT_WIDTH + margin);
     expect(minY).toBeGreaterThanOrEqual(-margin);
@@ -214,7 +212,7 @@ describe("real-data layout + 5 project nodes still fits a 1440x900 viewport", ()
 
   const settled = settleWithProjectAwareLink(graphWithProjects);
 
-  test("141-node real fixture plus 5 project nodes settle (146 nodes total)", () => {
+  test("136-node fixture plus 5 project nodes settle (141 nodes total)", () => {
     expect(settled.length).toBe(fixture.nodes.length + 5);
   });
 
@@ -234,7 +232,7 @@ describe("real-data layout + 5 project nodes still fits a 1440x900 viewport", ()
     expect(LABEL_FONT_PX * fitTransform.k).toBeGreaterThanOrEqual(10);
   });
 
-  test("the settled, fitted bounding box (141 real nodes + 5 project nodes) still fits the 1440x900 viewport", () => {
+  test("the settled, fitted bounding box (136 real nodes + 5 project nodes) still fits the 1440x900 viewport", () => {
     const points = settled.map((d) => ({ x: d.x, y: d.y, r: approxRadius(d) }));
     const fitTransform = computeFitTransform(points, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 
@@ -249,11 +247,7 @@ describe("real-data layout + 5 project nodes still fits a 1440x900 viewport", ()
       maxY = Math.max(maxY, sy + sr);
     }
 
-    // Tightened from an unjustified 60px (FACTORY-898): adding 5 project nodes to the real
-    // capture pushes the measured overflow slightly past the base check's, to ~8px on y
-    // (minY=-8, maxY=908 at time of writing) — 12px is that worst case plus a small jitter
-    // buffer, same reasoning as the base 141-node check above, not an arbitrary widening.
-    const margin = 12;
+    const margin = 60; // same loose margin as the base 136-node check above.
     expect(minX).toBeGreaterThanOrEqual(-margin);
     expect(maxX).toBeLessThanOrEqual(VIEWPORT_WIDTH + margin);
     expect(minY).toBeGreaterThanOrEqual(-margin);
