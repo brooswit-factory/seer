@@ -9,8 +9,6 @@ const AGENT_STATUS_LABELS: Record<string, AgentStatus> = {
   "agent:none": "none",
 };
 
-const ADMISSION_WITHHELD_LABEL = "admission:withheld";
-
 interface JiraIssueLinkType {
   name: string;
 }
@@ -127,8 +125,6 @@ export class JiraProvider implements Provider {
         break;
       }
     }
-    const admissionWithheld = labels.includes(ADMISSION_WITHHELD_LABEL);
-
     const links: ProviderLink[] = [];
     for (const link of issue.fields.issuelinks ?? []) {
       const linkedKey = link.inwardIssue?.key ?? link.outwardIssue?.key;
@@ -148,7 +144,6 @@ export class JiraProvider implements Provider {
       url: this.issueUrl(issue.key),
       agentStatus,
       providerCanReportStatus: true,
-      admissionWithheld,
       ...(issue.fields.issuetype?.name !== undefined ? { resourceType: issue.fields.issuetype.name } : {}),
       ...(jiraStatus !== undefined ? { jiraStatus } : {}),
       ...(project !== undefined ? { project: { key: project.key, name: project.name, url: this.projectUrl(project.key) } } : {}),

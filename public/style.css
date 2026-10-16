@@ -469,16 +469,8 @@ header .timestamp.stale {
   stroke-opacity: var(--dim-opacity);
 }
 
-.admission-ring {
-  fill: none;
-  stroke: var(--warn);
-  stroke-width: 2;
-  stroke-dasharray: 2 2;
-}
-
-/* Selection halo (FACTORY-957 item 4): a dashed ring, same gap convention as `.admission-ring`
-   but keyed off `--fg` (theme-neutral) rather than `--warn`, so it never reads as the admission
-   warning. Always on top (inserted last, see app.js), never a fill — the node's own fill/border
+/* Selection halo (FACTORY-957 item 4): a dashed, theme-neutral ring keyed off `--fg`.
+   Always on top (inserted last, see app.js), never a fill — the node's own fill/border
    colours are never touched by selection. */
 .selection-halo {
   fill: none;
@@ -502,8 +494,8 @@ header .timestamp.stale {
  * the group itself would also move the node, which the LAYOUT SAFETY requirement rules out.
  *
  * Max scale (border 1.2x BLOCKED, 1.12x STALLED) stays well inside the existing
- * `ADMISSION_RING_GAP`/label clearance already computed from each node's own (small, ~7-9px)
- * radius — a 20% growth on a 7-9px radius is <= ~2px, comfortably inside the 9px admission-ring
+ * selection-halo/label clearance already computed from each node's own (small, ~7-9px)
+ * radius — a 20% growth on a 7-9px radius is <= ~2px, comfortably inside the 22px selection-halo
  * gap and the two-line label's own bbox margin (`labelBottomExtent`, app.js) already used for
  * fit-to-view — so neither needs a bbox change for this feature.
  */

@@ -12,7 +12,6 @@ function match(name: string, overrides: Partial<ProviderMatch> = {}): ProviderMa
     url: `https://example.com/${name}`,
     agentStatus: "idle",
     providerCanReportStatus: true,
-    admissionWithheld: false,
     links: [],
     ...overrides,
   };
@@ -43,6 +42,30 @@ function configWith(sources: SeerConfig["sources"], linkDepth = 1): SeerConfig {
 }
 
 describe("collect", () => {
+  test("does not pass retired provider metadata into query, linked, or project nodes", async () => {
+    const config = configWith([
+      { id: "a@m1", machine: "m1", user: "a", displayName: "A", queries: [{ provider: "stub", query: "qa" }] },
+    ]);
+    const legacyMatch = {
+      ...match("hit", {
+        resourceType: "Epic",
+        project: { key: "X", name: "Example", url: "https://example.com/X" },
+        links: [{ targetId: "stub:neighbour", kind: "relates" }],
+      }),
+      admissionWithheld: true,
+    };
+    const legacyNeighbour = { ...match("neighbour"), admissionWithheld: true };
+    const provider = new StubProvider(
+      { qa: { matches: [legacyMatch] } },
+      { "stub:neighbour": legacyNeighbour },
+    );
+
+    const graph = await collect(config, { stub: provider }, { resultCap: 50 });
+
+    expect(graph.nodes.map((node) => node.id).sort()).toEqual(["jira-project:X", "stub:hit", "stub:neighbour"]);
+    for (const node of graph.nodes) expect(node).not.toHaveProperty("admissionWithheld");
+  });
+
   test("multi-source attribution: each source's query hits are attributed to that source", async () => {
     const config = configWith([
       { id: "a@m1", machine: "m1", user: "a", displayName: "A", queries: [{ provider: "stub", query: "qa" }] },
@@ -234,7 +257,6 @@ describe("collect", () => {
         url: "https://example.com/browse/FACTORY",
         agentStatus: "none",
         providerCanReportStatus: false,
-        admissionWithheld: false,
       });
       expect(projectNodes[0]).not.toHaveProperty("jiraStatus");
       expect(graph.edges).toContainEqual({ source: "jira-project:FACTORY", target: "stub:EPIC-1", kind: "contains" });

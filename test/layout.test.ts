@@ -155,7 +155,6 @@ describe("real-data layout + 5 project nodes still fits a 1440x900 viewport", ()
     ownerSourceId: fixture.nodes[0].ownerSourceId,
     agentStatus: "none",
     providerCanReportStatus: false,
-    admissionWithheld: false,
     discovery: "query",
   }));
   const containsEdges = projectNodes.map((p, i) => ({

@@ -13,7 +13,6 @@ export interface ProviderMatch {
   url: string;
   agentStatus: AgentStatus;
   providerCanReportStatus: boolean;
-  admissionWithheld: boolean;
   /** The kind of resource this is, e.g. a Jira issue type name, or a non-Jira provider's own value. Optional — absent means "other/unknown" to the viewer. */
   resourceType?: string;
   /** The resource's Jira workflow status, name + category. Optional — absent on a non-Jira provider's match. */

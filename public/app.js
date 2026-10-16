@@ -16,8 +16,8 @@ import { splitNodeLabel, maxCharsForRadius, truncateToChars, line1Dy, labelBotto
 import { animationClassFor, staggerDelayMs, PULSE_BODY_WORKING, PULSE_BORDER_STALLED, PULSE_BORDER_BLOCKED } from "./agent-animation.js";
 import { loadAnimationsEnabled, saveAnimationsEnabled } from "./animation-prefs.js";
 
-/** Extra radius (px), on top of the admission ring's own gap, the selection halo (FACTORY-957 item 4) is drawn at — distinct from `ADMISSION_RING_GAP` below so the two rings never collide even when a node has both. */
-const SELECTION_HALO_GAP = 13;
+/** Extra radius (px) beyond the node's own shape for the selection halo (FACTORY-957 item 4). */
+const SELECTION_HALO_GAP = 22;
 
 const DEFAULT_REFRESH_SECONDS = 30;
 /** Collision-radius padding, px — same margin the pre-FACTORY-890 fixed collide radius (NODE_RADIUS + 4) used. */
@@ -32,15 +32,6 @@ const COLLIDE_PADDING = 4;
  * one either way, query-hit or not — it's a synthesised container, not a matched resource.
  */
 const DISCOVERY_DOT_RADIUS = 2.5;
-/**
- * Gap (px) between a node's own shape (now carrying the Jira-status border stroke directly,
- * FACTORY-939) and the (older, FACTORY-855) admission-withheld ring — kept at the FACTORY-900
- * width rather than reverting to the pre-FACTORY-900 `+4` since the shape's own border is now a
- * full 3-4px stroke (vs. the old plain 1.5px `--node-stroke`), so the extra clearance still
- * matters to keep the two read as distinct circles.
- */
-const ADMISSION_RING_GAP = 9;
-
 /** "light" | "dark", read live off the OS/browser preference — the Jira-status border palette is a theme token pair (FACTORY-900 item 2, FACTORY-939), not a single hardcoded table. */
 function currentTheme() {
   return typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
@@ -431,9 +422,6 @@ function renderBorderLegend() {
     `<div class="legend-row"><span class="border-swatch dashed"></span><span>dashed border = the provider cannot report agent status (see fill legend above)</span></div>`,
   );
   rows.push(
-    `<div class="legend-row"><span class="swatch" style="background:none;border:2px dashed #fab387"></span><span>admission withheld (a second, wider ring overlay, never a fill)</span></div>`,
-  );
-  rows.push(
     `<div class="legend-row"><span style="width:14px;text-align:center">○</span><span>dot = hit by a query (never a link-discovered or project node); fixed size, never scales with the node</span></div>`,
   );
   el.innerHTML = rows.join("");
@@ -819,22 +807,10 @@ function renderGraph(initialGraph, { onNodeClick, onBackgroundClick } = {}) {
         .text(truncateToChars(name, maxCharsForRadius(radius, LINE2_FONT_SCALE)));
     });
 
-    // The admission ring and the discovery dot are presence-toggled per node, not just styled,
-    // since whether a node has one can change between refreshes. Radii are re-derived every pass
-    // too, since a node's shape/size can change underneath an existing ring. Insertion order
-    // (always before "text") puts the discovery dot on top.
+    // The discovery dot is presence-toggled per node, since discovery can change between
+    // refreshes. Insert it before "text" so the node's own label remains readable on top.
     merged.each(function (d) {
       const g = d3.select(this);
-      const radius = approxRadiusForNode(d);
-
-      const hasAdmissionRing = !g.select("circle.admission-ring").empty();
-      if (d.admissionWithheld && !hasAdmissionRing) {
-        g.insert("circle", "text").attr("class", "admission-ring").attr("r", radius + ADMISSION_RING_GAP);
-      } else if (!d.admissionWithheld && hasAdmissionRing) {
-        g.select("circle.admission-ring").remove();
-      } else if (d.admissionWithheld && hasAdmissionRing) {
-        g.select("circle.admission-ring").attr("r", radius + ADMISSION_RING_GAP);
-      }
 
       const hasDot = !g.select("circle.discovery-dot").empty();
       const shouldHaveDot = shouldShowDiscoveryDot(d);
@@ -891,9 +867,8 @@ function renderGraph(initialGraph, { onNodeClick, onBackgroundClick } = {}) {
 
   /**
    * Presence-toggles the `.selection-halo` ring (FACTORY-957 item 4) on whichever single node
-   * matches `selectedNodeId` — same "toggle by presence, re-derive the radius every pass" pattern
-   * the admission ring/discovery dot above already use, since both the selected id and a node's
-   * own size can change between calls. Takes the already-`merged` selection so a selection change
+   * matches `selectedNodeId`, updating its radius on every pass because both the selected id
+   * and a node's own size can change between calls. Takes the already-`merged` selection so a selection change
    * (via `setSelectedId`, outside a full `apply()`) can restyle instantly without re-running the
    * whole `renderNodeSelection` join.
    */
@@ -903,13 +878,13 @@ function renderGraph(initialGraph, { onNodeClick, onBackgroundClick } = {}) {
       const hasHalo = !g.select("circle.selection-halo").empty();
       const shouldHaveHalo = d.id === selectedNodeId;
       if (shouldHaveHalo && !hasHalo) {
-        // Inserted before "text", same as the admission ring/discovery dot above, so the node's
+        // Inserted before "text", same as the discovery dot above, so the node's
         // own label stays readable on top of the halo rather than the halo painting over it.
-        g.insert("circle", "text").attr("class", "selection-halo").attr("r", approxRadiusForNode(d) + ADMISSION_RING_GAP + SELECTION_HALO_GAP);
+        g.insert("circle", "text").attr("class", "selection-halo").attr("r", approxRadiusForNode(d) + SELECTION_HALO_GAP);
       } else if (!shouldHaveHalo && hasHalo) {
         g.select("circle.selection-halo").remove();
       } else if (shouldHaveHalo && hasHalo) {
-        g.select("circle.selection-halo").attr("r", approxRadiusForNode(d) + ADMISSION_RING_GAP + SELECTION_HALO_GAP);
+        g.select("circle.selection-halo").attr("r", approxRadiusForNode(d) + SELECTION_HALO_GAP);
       }
     });
   }
