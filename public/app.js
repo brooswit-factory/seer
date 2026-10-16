@@ -15,6 +15,7 @@ import { sortNodesForSidebar, filterNodesForSidebar } from "./sidebar-list.js";
 import { splitNodeLabel, maxCharsForRadius, truncateToChars, line1Dy, labelBottomExtent, LINE2_FONT_SCALE, LINE_SPACING_PX } from "./node-label.js";
 import { animationClassFor, staggerDelayMs, PULSE_BODY_WORKING, PULSE_BORDER_STALLED, PULSE_BORDER_BLOCKED } from "./agent-animation.js";
 import { loadAnimationsEnabled, saveAnimationsEnabled } from "./animation-prefs.js";
+import { edgeEndPoint } from "./edge-geometry.js";
 
 /** Extra radius (px), on top of the admission ring's own gap, the selection halo (FACTORY-957 item 4) is drawn at — distinct from `ADMISSION_RING_GAP` below so the two rings never collide even when a node has both. */
 const SELECTION_HALO_GAP = 13;
@@ -928,13 +929,21 @@ function renderGraph(initialGraph, { onNodeClick, onBackgroundClick } = {}) {
 
   let nodeSel = nodeLayer.selectAll("g.node");
 
-  /** Paints the current `x`/`y` of every node/edge — the simulation's own "tick" event fires this on every animated frame; the `prefers-reduced-motion` synchronous path (below) calls it ONCE after manually ticking the simulation to rest, since `simulation.tick()` itself never dispatches "tick" (only the internal timer-driven step loop does). */
+  /** Paints the current `x`/`y` of every node/edge — the simulation's own "tick" event fires this on every animated frame; the `prefers-reduced-motion` synchronous path (below) calls it ONCE after manually ticking the simulation to rest, since `simulation.tick()` itself never dispatches "tick" (only the internal timer-driven step loop does).
+   *
+   * The line's end point is pulled back from the target's raw x/y to its boundary via
+   * `edgeEndPoint` (FACTORY-882) — `marker-end` anchors the arrowhead to that end point, and an
+   * end point AT the target's centre buries the arrowhead under the node shape, which paints on
+   * top (nodeLayer is appended after edgeLayer, below). Recomputed every tick (both endpoints
+   * move every frame) and per-edge (node radius varies by type/size tier via
+   * `approxRadiusForNode`), never a single constant.
+   */
   function renderPositions() {
     edgeSel
       .attr("x1", (d) => d.source.x)
       .attr("y1", (d) => d.source.y)
-      .attr("x2", (d) => d.target.x)
-      .attr("y2", (d) => d.target.y);
+      .attr("x2", (d) => edgeEndPoint(d.source, d.target, approxRadiusForNode(d.target)).x)
+      .attr("y2", (d) => edgeEndPoint(d.source, d.target, approxRadiusForNode(d.target)).y);
     nodeSel.attr("transform", (d) => `translate(${d.x},${d.y})`);
   }
 
