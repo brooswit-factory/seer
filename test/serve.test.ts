@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { startServer } from "../src/server/serve.ts";
 import { GraphCache } from "../src/server/graph-cache.ts";
+import { createSanitizeError } from "../src/server/sanitize-error.ts";
 import type { Graph } from "../src/graph/schema.ts";
 
 function graph(overrides: Partial<Graph> = {}): Graph {
@@ -42,6 +43,11 @@ describe("startServer /graph.json", () => {
   });
 
   test("a credential leaked into a collection failure never reaches the HTTP response body", async () => {
+    // Regression guard for the FACTORY-881 trap: a stubbed sanitizeError (as used elsewhere in
+    // this file, deliberately, to isolate server/GraphCache wiring from redaction logic) would
+    // prove nothing about whether the real createSanitizeError actually strips the secret. This
+    // test uses the production sanitiser so a reader can trust the result as evidence that the
+    // live /graph.json path redacts for real.
     const SECRET = "jira-api-token-should-never-leak";
     const graphCache = new GraphCache({
       collect: async () => {
@@ -49,7 +55,7 @@ describe("startServer /graph.json", () => {
       },
       refreshSeconds: 30,
       fixtureGraph: graph(),
-      sanitizeError: (cause) => (cause instanceof Error ? cause.message.split(SECRET).join("[redacted]") : String(cause)),
+      sanitizeError: createSanitizeError([SECRET]),
     });
     server = startServer({ port: 0, graphCache, idleTimeoutSeconds: 65, openInBrowser: false });
 
