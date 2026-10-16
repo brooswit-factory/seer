@@ -49,7 +49,6 @@ export const GraphNodeSchema = z.object({
   agentStatus: AgentStatusSchema,
   /** Distinguishes "this provider cannot report status" (false) from "it reports none" (true + agentStatus "none"). */
   providerCanReportStatus: z.boolean(),
-  admissionWithheld: z.boolean(),
   /** "query": this node matched one of its owning source's queries directly. "link": reached only by one-hop link expansion from a query hit — the viewer must mark these distinctly. */
   discovery: z.enum(["query", "link"]),
   /**

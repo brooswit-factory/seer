@@ -53,14 +53,26 @@ describe("JiraProvider.runQuery", () => {
     expect(matches.every((m) => m.providerCanReportStatus)).toBe(true);
   });
 
-  test("admission:withheld label sets admissionWithheld", async () => {
+  test("retired admission:withheld label does not affect provider matches", async () => {
     const fetchImpl = (async () =>
-      new Response(JSON.stringify({ issues: [issue("X-1", { labels: ["admission:withheld"] })], isLast: true }), { status: 200 })) as unknown as typeof fetch;
+      new Response(JSON.stringify({ issues: [issue("X-1", { labels: ["admission:withheld", "agent:blocked"] })], isLast: true }), { status: 200 })) as unknown as typeof fetch;
     const provider = new JiraProvider({ baseUrl: "https://example.atlassian.net", email: "a@b.com", apiToken: "tok", fetchImpl });
 
     const { matches } = await provider.runQuery("q", 10);
 
-    expect(matches[0]?.admissionWithheld).toBe(true);
+    expect(matches[0]?.agentStatus).toBe("blocked");
+    expect(matches[0]).not.toHaveProperty("admissionWithheld");
+  });
+
+  test("single-issue fetch also ignores the retired label", async () => {
+    const fetchImpl = (async () =>
+      new Response(JSON.stringify(issue("X-1", { labels: ["admission:withheld"] })), { status: 200 })) as unknown as typeof fetch;
+    const provider = new JiraProvider({ baseUrl: "https://example.atlassian.net", email: "a@b.com", apiToken: "tok", fetchImpl });
+
+    const match = await provider.fetchById("jira-work:X-1");
+
+    expect(match?.agentStatus).toBe("none");
+    expect(match).not.toHaveProperty("admissionWithheld");
   });
 
   test("issuelinks and parent become links for one-hop expansion", async () => {

@@ -6,6 +6,20 @@ function readViewerFile(name: string): string {
   return readFileSync(path, "utf-8");
 }
 
+describe("viewer: retired admission marker", () => {
+  test("has no admission overlay, legend, field access, or stylesheet rule", () => {
+    expect(readViewerFile("app.js")).not.toMatch(/admission|withheld/i);
+    expect(readViewerFile("style.css")).not.toMatch(/admission|withheld/i);
+  });
+
+  test("preserves selection-halo spacing for both creation and refresh", () => {
+    const appJs = readViewerFile("app.js");
+    expect(appJs).toMatch(/const SELECTION_HALO_GAP = 22;/);
+    expect(appJs.match(/approxRadiusForNode\(d\) \+ SELECTION_HALO_GAP/g)).toHaveLength(2);
+    expect(readViewerFile("style.css")).toMatch(/\.selection-halo\s*\{/);
+  });
+});
+
 describe("viewer: no per-user grouping", () => {
   test("app.js draws no hulls, hull labels, or hull colours", () => {
     const appJs = readViewerFile("app.js");

@@ -127,7 +127,6 @@ export async function collect(config: SeerConfig, providers: Record<string, Prov
     ownerSourceId,
     agentStatus: match.agentStatus,
     providerCanReportStatus: match.providerCanReportStatus,
-    admissionWithheld: match.admissionWithheld,
     discovery,
     ...(match.resourceType !== undefined ? { resourceType: match.resourceType } : {}),
     ...(match.jiraStatus !== undefined ? { jiraStatus: match.jiraStatus } : {}),
@@ -158,7 +157,6 @@ export async function collect(config: SeerConfig, providers: Record<string, Prov
       ownerSourceId: project.ownerSourceId,
       agentStatus: "none",
       providerCanReportStatus: false,
-      admissionWithheld: false,
       discovery: "query",
       resourceType: "project",
     });

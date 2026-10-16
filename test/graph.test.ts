@@ -45,7 +45,6 @@ describe("validateGraph", () => {
         ownerSourceId: "u1@machine1",
         agentStatus: "working",
         providerCanReportStatus: true,
-        admissionWithheld: false,
         discovery: "query",
       },
     ],
@@ -55,6 +54,15 @@ describe("validateGraph", () => {
 
   test("accepts a minimal valid graph", () => {
     expect(validateGraph(base).valid).toBe(true);
+  });
+
+  test("drops the retired admissionWithheld field from old graph snapshots", () => {
+    const legacy = { ...base, nodes: [{ ...base.nodes[0], admissionWithheld: true }] };
+    const parsed = parseGraph(legacy);
+
+    expect(parsed.nodes[0]?.agentStatus).toBe("working");
+    expect(parsed.nodes[0]).not.toHaveProperty("admissionWithheld");
+    expect(parsed.nodes[0]).toEqual(parseGraph(base).nodes[0]);
   });
 
   test("rejects an invalid agentStatus value", () => {
@@ -158,7 +166,6 @@ describe("validateGraph", () => {
       ownerSourceId: "u1@machine1",
       agentStatus: "none",
       providerCanReportStatus: false,
-      admissionWithheld: false,
       discovery: "query",
       resourceType: "project",
     };

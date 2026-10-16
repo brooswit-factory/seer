@@ -275,7 +275,7 @@ code imports types rather than redeclaring them.
   `agent:*` statuses (`working | idle | blocked | stalled | none`), whether
   the provider is even capable of reporting status
   (`providerCanReportStatus` — distinguishes "cannot report" from "reports
-  none"), whether an admission-withheld marker is present, `discovery`
+  none"), `discovery`
   (`"query" | "link"` — whether a source's query matched this node directly
   or it was only reached by link expansion), an OPTIONAL `resourceType`
   (the Jira issue type name, or a non-Jira provider's own value — absent on
@@ -299,8 +299,8 @@ code imports types rather than redeclaring them.
 
 `fixtures/graph.example.json` is a committed, schema-valid example graph
 (~10-15 nodes): at least two (machine, user) sources, a provider that cannot
-report agent status, all five agent-status values, an admission-withheld
-node, a failed query record, and a zero-match query record.
+report agent status, all five agent-status values, a failed query record,
+and a zero-match query record.
 `fixtures/seer.config.example.json` is a matching example config, with every
 query naming its user explicitly (no `currentUser()`).
 
