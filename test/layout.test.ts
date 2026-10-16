@@ -2,12 +2,26 @@
 // against a graph the size of a real fleet snapshot (~136 nodes), and assert the settled layout
 // fits a 1440x900 viewport after fit-to-view at a readable scale with no significant overlap.
 //
-// DATA NOTE: the ticket asks for one REAL `/graph.json` captured from codey's seer. This workspace
-// could not reach codey — seer's viewer is STRUCTURALLY loopback-only (`src/server/serve.ts`
-// binds `127.0.0.1` as a literal, never configurable), and no SSH credentials for host `codey`
-// were available here. `test/fixtures/graph.synthetic-136.json` is a SYNTHETIC stand-in instead:
+// DATA NOTE (FACTORY-898, scope corrected 2026-10-16): the ticket originally asked for one REAL
+// `/graph.json` captured from a running seer. That's not producible from this workspace — seer's
+// viewer is STRUCTURALLY loopback-only (`src/server/serve.ts` binds `127.0.0.1` as a literal,
+// never configurable), there is no reachable host running seer here, and no `JIRA_API_TOKEN` is
+// available to run `bun run seer collect` against this fleet's real Jira (confirmed via a bounded
+// discovery pass: no seer process, no systemd unit, no env var, and no existing collector-written
+// `graph.json` artifact anywhere under this user). A prior attempt instead hand-assembled a
+// fixture from capped `jira_search`/`jira_get_issue` MCP reads; review correctly rejected that, as
+// a chosen `linkDepth = 0` with zero edges doesn't establish what the DEPLOYED collector actually
+// produces. That attempt was reverted.
+//
+// Per explicit ticket direction superseding the original real-capture requirement (comment
+// authored by the ticket's reviewer), synthetic data is the accepted scope: this test runs
+// against `test/fixtures/graph.synthetic-136.json`, a clearly-labeled SYNTHETIC stand-in
 // generated with the real schema (same node/edge shape, same type/status mix a fleet snapshot
-// has) but not live data. Flagged on the ticket; swap in a real capture when one is reachable.
+// has, 130 nodes / 107 edges) rather than live data. The margin below is tightened against this
+// fixture's ACTUALLY MEASURED settled layout (not assumed): both checks below settle with zero
+// overflow and 27-289px of slack on every side (see each test's own `console.log`), so a 20px
+// margin is a real tightening from the prior unjustified 60px while keeping headroom for minor
+// floating-point variation across engines.
 //
 // This test exercises `d3-force` directly (a devDependency, pure algorithm package with no DOM),
 // not the CDN-loaded `d3` global `public/app.js` runs in a browser — same force names/semantics,
@@ -97,10 +111,10 @@ describe("real-data (~136 node) layout settles into a 1440x900 viewport after fi
       maxY = Math.max(maxY, sy + sr);
     }
 
-    // A loose margin (half the padding `computeFitTransform` targets): the layout-tuning
-    // constants above are meant to get real ~136-node data inside the viewport; a clamp to
-    // MIN_READABLE_SCALE (label floor) can still leave a small, documented overflow.
-    const margin = 60;
+    // Tightened from an unjustified 60px: measured bbox is [289,32]..[1151,868], i.e. zero
+    // actual overflow against the 1440x900 viewport with 32-289px of slack on every side. 20px
+    // keeps a real margin while catching a regression far smaller than the old 60px ever could.
+    const margin = 20;
     expect(minX).toBeGreaterThanOrEqual(-margin);
     expect(maxX).toBeLessThanOrEqual(VIEWPORT_WIDTH + margin);
     expect(minY).toBeGreaterThanOrEqual(-margin);
@@ -234,7 +248,9 @@ describe("real-data layout + 5 project nodes still fits a 1440x900 viewport", ()
       maxY = Math.max(maxY, sy + sr);
     }
 
-    const margin = 60; // same loose margin as the base 136-node check above.
+    // Same tightened margin as the base check above: measured bbox is [278,27]..[1162,873],
+    // zero actual overflow with 27-278px of slack on every side.
+    const margin = 20;
     expect(minX).toBeGreaterThanOrEqual(-margin);
     expect(maxX).toBeLessThanOrEqual(VIEWPORT_WIDTH + margin);
     expect(minY).toBeGreaterThanOrEqual(-margin);
